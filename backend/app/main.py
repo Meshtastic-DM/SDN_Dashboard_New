@@ -18,6 +18,9 @@ from app.services.meshtastic_service import (
     discover_meshtastic_ports
 )
 
+from app.routers.sdn_serial import router as sdn_serial_router
+from app.routers.route_table import router as route_table_router
+
 from app.services.broadcaster import Broadcaster
 from app.serial.worker import SerialWorker
 from app.serial.serial_source import iter_fake_lines, iter_serial_lines
@@ -44,6 +47,9 @@ app.add_middleware(
 app.include_router(topology.router)
 app.include_router(meshtastic.router)
 app.include_router(texting.router)
+
+app.include_router(sdn_serial_router)
+app.include_router(route_table_router)
 
 @app.on_event("startup")
 async def startup_event():
