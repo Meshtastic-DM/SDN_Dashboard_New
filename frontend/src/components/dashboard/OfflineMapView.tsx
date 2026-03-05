@@ -3,7 +3,9 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '@/styles/components/OfflineMapView.css';
-import { mockNodes, type SDNNode } from '@/data/mockNodes';
+import { useNodesContext } from '@/contexts/NodesContext';
+import { NodeDisplayData } from '@/types/nodes';
+import { Loader2 } from 'lucide-react';
 
 // Fix for default marker icon in React-Leaflet
 type IconDefault = L.Icon.Default & {
@@ -17,15 +19,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// Custom marker icons for different node types
-const createCustomIcon = (node: SDNNode) => {
-  const colorMap = {
-    switch: '#00D9FF',
-    router: '#9333EA',
-    controller: '#F59E0B',
-    host: '#10B981',
-  };
-
+// Custom marker icons for Meshtastic nodes
+const createCustomIcon = (node: NodeDisplayData) => {
   const statusMap = {
     online: '#10B981',
     offline: '#EF4444',
@@ -36,7 +31,7 @@ const createCustomIcon = (node: SDNNode) => {
     className: 'custom-marker',
     html: `
       <div class="marker-container">
-        <div class="marker-circle" style="background-color: ${colorMap[node.type]}; border-color: ${statusMap[node.status]}"></div>
+        <div class="marker-circle" style="background-color: #00D9FF; border-color: ${statusMap[node.status]}"></div>
         <div class="marker-label">${node.name}</div>
       </div>
     `,
@@ -71,32 +66,53 @@ interface OfflineMapViewProps {
 }
 
 const OfflineMapView: React.FC<OfflineMapViewProps> = ({ selectedNodeId, onSelectNode }) => {
-  const defaultCenter: [number, number] = [6.9271, 79.8612]; // Colombo, Sri Lanka as default
+  const { nodes, loading, error } = useNodesContext();
+  
+  // Filter nodes that have valid GPS coordinates
+  const nodesWithCoords = useMemo(() => {
+    return nodes.filter(node => 
+      node.latitude !== undefined && 
+      node.longitude !== undefined &&
+      !isNaN(node.latitude) &&
+      !isNaN(node.longitude)
+    );
+  }, [nodes]);
+
+  // Calculate map center based on average position of all nodes with GPS
+  const mapCenter: [number, number] = useMemo(() => {
+    const avgLat = nodesWithCoords.reduce((sum, node) => sum + (node.latitude || 0), 0) / nodesWithCoords.length;
+    const avgLon = nodesWithCoords.reduce((sum, node) => sum + (node.longitude || 0), 0) / nodesWithCoords.length;
+    return [avgLat, avgLon];
+  }, [nodesWithCoords]);
+
   const defaultZoom = 13;
 
-  // Convert nodes to have lat/lon coordinates based on their x/y positions
-  const nodesWithCoords = useMemo(() => {
-    const baseLatitude = 6.9271;
-    const baseLongitude = 79.8612;
-    const spread = 0.01; // degrees
+  if (loading && nodes.length === 0) {
+    return (
+      <div className="offline-map-container">
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
-    return mockNodes.map((node, index) => {
-      // Use a circular distribution pattern based on node index
-      const angle = (2 * Math.PI * index) / mockNodes.length;
-      const radius = spread * (1 + Math.random() * 0.5); // Add some randomness
-      
-      return {
-        ...node,
-        lat: baseLatitude + radius * Math.cos(angle),
-        lon: baseLongitude + radius * Math.sin(angle),
-      };
-    });
-  }, []);
+  if (error) {
+    return (
+      <div className="offline-map-container">
+        <div className="flex items-center justify-center h-full text-red-500 font-mono text-sm">
+          Error loading nodes: {error}
+        </div>
+      </div>
+    );
+  }
 
   if (nodesWithCoords.length === 0) {
     return (
       <div className="offline-map-container">
-        <div className="view-placeholder">Loading map data...</div>
+        <div className="flex items-center justify-center h-full text-muted-foreground font-mono text-sm">
+          No nodes with GPS coordinates found
+        </div>
       </div>
     );
   }
@@ -104,7 +120,7 @@ const OfflineMapView: React.FC<OfflineMapViewProps> = ({ selectedNodeId, onSelec
   return (
     <div className="offline-map-container">
       <MapContainer
-        center={defaultCenter}
+        center={mapCenter}
         zoom={defaultZoom}
         scrollWheelZoom={true}
         style={{ height: '100%', width: '100%' }}
@@ -119,7 +135,7 @@ const OfflineMapView: React.FC<OfflineMapViewProps> = ({ selectedNodeId, onSelec
         {nodesWithCoords.map((node) => (
           <Marker
             key={node.id}
-            position={[node.lat, node.lon]}
+            position={[node.latitude!, node.longitude!]}
             icon={createCustomIcon(node)}
             eventHandlers={{
               click: () => {
@@ -134,13 +150,14 @@ const OfflineMapView: React.FC<OfflineMapViewProps> = ({ selectedNodeId, onSelec
                 <h4 className="font-semibold text-lg mb-2">{node.name}</h4>
                 <div className="space-y-1 text-sm">
                   <p><strong>ID:</strong> {node.id}</p>
-                  <p><strong>Type:</strong> {node.type}</p>
-                  <p><strong>IP:</strong> {node.ip}</p>
-                  <p><strong>MAC:</strong> {node.mac}</p>
+                  <p><strong>HW Model:</strong> {node.hwModel}</p>
+                  <p><strong>Role:</strong> {node.role || 'N/A'}</p>
                   <p><strong>Status:</strong> <span className={`status-${node.status}`}>{node.status}</span></p>
-                  <p><strong>Location:</strong> {node.lat.toFixed(4)}, {node.lon.toFixed(4)}</p>
-                  <p><strong>Throughput:</strong> {node.throughput}</p>
-                  <p><strong>Latency:</strong> {node.latency}</p>
+                  <p><strong>SNR:</strong> {node.snr}</p>
+                  <p><strong>Battery:</strong> {node.batteryLevel}</p>
+                  <p><strong>Hops Away:</strong> {node.hopsAway}</p>
+                  <p><strong>Location:</strong> {node.latitude!.toFixed(6)}, {node.longitude!.toFixed(6)}</p>
+                  <p><strong>Altitude:</strong> {node.altitude}m</p>
                 </div>
               </div>
             </Popup>
