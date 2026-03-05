@@ -7,7 +7,7 @@ import NodeDetailsSidebar from "@/components/dashboard/NodeDetailsSidebar";
 import MapView from "@/components/dashboard/MapView";
 import TopologyView from "@/components/dashboard/TopologyView";
 import ExtendedNodeView from "@/components/dashboard/ExtendedNodeView";
-import MessagingWindow from "@/components/dashboard/MessagingWindow";
+import MessagesView from "@/components/dashboard/MessagesView";
 import RouteAnalysis from "@/components/dashboard/RouteAnalysis";
 import OfflineMapView from "@/components/dashboard/OfflineMapView";
 import { useNodesContext } from "@/contexts/NodesContext";
@@ -80,7 +80,7 @@ const Index = () => {
               <ExtendedNodeView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
             </TabsContent>
             <TabsContent value="messages" className="h-full m-0">
-              <MessagingWindow />
+              <MessagesView />
             </TabsContent>
             <TabsContent value="routes" className="h-full m-0">
               <RouteAnalysis />
