@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Send, MessageSquare, User, CheckCheck, Check, Clock, Signal } from 'lucide-react';
 import { useNodesContext } from '@/contexts/NodesContext';
-import { useMessages } from '@/hooks/useMessages';
+import { useMessagesContext } from '@/contexts/MessagesContext';
 import { Message } from '@/types/message';
 
 export default function MessagesView() {
   const { nodes } = useNodesContext();
-  const { messages, loading, error, wsConnected, sendMessage } = useMessages(true); // Always connect in this view
+  const { messages, loading, error, wsConnected, sendMessage } = useMessagesContext();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
