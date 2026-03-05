@@ -7,6 +7,7 @@ import os
 import serial.tools.list_ports
 import time
 from datetime import datetime
+from app.services.sdn_packet_handler import handle_SDN_route_update
 # Protobuf imports for SDN and AODV packet parsing
 from app.generated import sdn_pb2, aodv_pb2, portnums_pb2
 
@@ -16,6 +17,11 @@ def publish_text_to_websocket(app, message:dict):
     broadcaster.publish(message)
     print(f"Published text message to WebSocket: {message}")
 
+def publish_node_update_to_websocket(app, node_info:dict):
+    """Utility function to publish node updates to the frontend via WebSocket"""
+    broadcaster = app.state.node_update_broadcaster  # Use separate broadcaster for node updates
+    broadcaster.publish(node_info)
+    print(f"Published node update to WebSocket: {node_info}")
 
 def on_receive(packet, interface):
     """Callback function to handle incoming Meshtastic packets"""
@@ -52,11 +58,18 @@ def on_receive(packet, interface):
                 print("  Type: Route Update")
                 print(f"  Reporter: {hex(packet.get('from'))}")
                 ru = sdn_msg.route_update
-                print(f"  Destination: {hex(ru.destination)}")
-                print(f"  Next Hop: {hex(ru.next_hop)}")
-                print(f"  Hop Count: {ru.hop_count}")
-                print(f"  Dest Seq Num: {ru.dest_seq_num}")
-                print(f"  Timestamp: {ru.timestamp}")
+                source = hex(packet.get('from'))
+                destination = hex(ru.destination)
+                next_hop = hex(ru.next_hop)
+                hop_count = ru.hop_count
+                timestamp = ru.timestamp
+                dest_seq_num = ru.dest_seq_num
+                # print(f"  Destination: {hex(ru.destination)}")
+                # print(f"  Next Hop: {hex(ru.next_hop)}")
+                # print(f"  Hop Count: {ru.hop_count}")
+                # print(f"  Dest Seq Num: {ru.dest_seq_num}")
+                # print(f"  Timestamp: {ru.timestamp}")
+                handle_SDN_route_update(source, destination, hop_count, next_hop, timestamp, dest_seq_num, interface.app)
             elif sdn_msg.HasField("route_command"):
                 print("  Type: Route Command")
                 print(f"  Reporter: {hex(packet.get('from'))}")
@@ -174,7 +187,11 @@ def on_receive(packet, interface):
     
     elif decoded.get("portnum") == "TELEMETRY_APP":
         #print(f"Received telemetry packet: {decoded}")
-        update_nodes_db(interface)
+        changed_nodes = update_nodes_db(interface)
+        if (len(changed_nodes) > 0):
+            for node in changed_nodes:
+                publish_node_update_to_websocket(interface.app, node)
+            
 
     elif decoded.get("portnum") == "ROUTING_APP":
         #print(f"Received routing packet: {packet}")

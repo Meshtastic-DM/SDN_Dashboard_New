@@ -8,30 +8,48 @@ def update_nodes_db(iface):
     """Function to fetch all nodes from the Meshtastic network and update the database"""
     nodes = iface.nodes
     db = SessionLocal()
+    changed_nodes = []
     try:
         for node_id, node_data in nodes.items():
-            # Convert node_id from string format '!6c7438c8' to bytes
             node_id_bytes = bytes.fromhex(node_id.strip('!'))
-            
-            # Check if node already exists in database
             existing_node = db.query(Node).filter(Node.id == node_id_bytes).first()
             
-            # Extract data from node_data
             user_info = node_data.get('user', {})
             device_metrics = node_data.get('deviceMetrics', {})
+            position_info = node_data.get('position', {})
             
+            gps_coords = None
+            if position_info.get('latitude') is not None and position_info.get('longitude') is not None:
+                lat = position_info.get('latitude')
+                lon = position_info.get('longitude')
+                alt = position_info.get('altitude', 0)
+                gps_coords = f"{lat},{lon},{alt}"
+            
+            last_heard = node_data.get('lastHeard')
+            status = 'online' if last_heard else 'offline'
+            
+            node_changed = False
             if existing_node:
-                # Update existing node
+                # Check for changes before updating
+                if (existing_node.long_name != user_info.get('longName') or
+                    existing_node.battery_level != device_metrics.get('batteryLevel') or
+                    existing_node.status != status or
+                    existing_node.snr != node_data.get('snr')):
+                    node_changed = True
+                
                 existing_node.long_name = user_info.get('longName')
                 existing_node.hw_model = user_info.get('hwModel')
                 existing_node.public_key = user_info.get('publicKey')
                 existing_node.snr = node_data.get('snr')
                 existing_node.battery_level = device_metrics.get('batteryLevel')
-                existing_node.status = 'online' if node_data.get('lastHeard') else 'offline'
+                existing_node.status = status
                 existing_node.hops_away = node_data.get('hopsAway')
+                if gps_coords:
+                    existing_node.gps_coordinates = gps_coords
+                node = existing_node
                 print(f"Updated node: {node_id}")
             else:
-                # Create new node
+                node_changed = True
                 new_node = Node(
                     id=node_id_bytes,
                     long_name=user_info.get('longName'),
@@ -39,17 +57,36 @@ def update_nodes_db(iface):
                     public_key=user_info.get('publicKey'),
                     snr=node_data.get('snr'),
                     battery_level=device_metrics.get('batteryLevel'),
-                    status='online' if node_data.get('lastHeard') else 'offline',
-                    hops_away=node_data.get('hopsAway')
+                    status=status,
+                    hops_away=node_data.get('hopsAway'),
+                    gps_coordinates=gps_coords
                 )
                 db.add(new_node)
+                node = new_node
                 print(f"Created new node: {node_id}")
+            
+            if node_changed:
+                # Convert node to dictionary before session closes
+                node_dict = {
+                    "id": node.id.hex(),
+                    "long_name": node.long_name,
+                    "hw_model": node.hw_model,
+                    "snr": node.snr,
+                    "battery_level": node.battery_level,
+                    "status": node.status,
+                    "hops_away": node.hops_away,
+                    "gps_coordinates": node.gps_coordinates,
+                    "role": node.role
+                }
+                changed_nodes.append(node_dict)
         
         db.commit()
         print(f"Successfully processed {len(nodes)} nodes")
+        return changed_nodes
     except Exception as e:
         db.rollback()
         print(f"Error updating nodes database: {e}")
+        return []
     finally:
         db.close()
 

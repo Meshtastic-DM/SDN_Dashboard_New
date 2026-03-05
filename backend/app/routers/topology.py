@@ -4,6 +4,7 @@ from app.services.startup_functions.feed_simulator import start_simulated_feed
 from app.core.database import SessionLocal, get_db
 from app.models.route import Route
 from app.services.broadcaster import Broadcaster
+from  app.models.node import Node
 
 router = APIRouter(prefix="/api/routeview", tags=["topology"])
 
@@ -26,6 +27,16 @@ async def reset_simulation():
     reset_state()
     await start_simulated_feed()
     return {"status": "reset"}
+
+@router.get("/loadall/nodes")
+def load_all_nodes():
+    db = SessionLocal()
+    try:
+        nodes = db.query(Node).all()
+        return[{ "id": node.id.hex(), "long_name": node.long_name, "hw_model": node.hw_model, "snr": node.snr, "battery_level": node.battery_level,
+                 "status": node.status, "hops_away": node.hops_away, "gps_coordinates": node.gps_coordinates,"role": node.role} for node in nodes]
+    finally:
+        db.close()
 
 
 #"This api is used to load all routes from the database on initial page load."
@@ -52,5 +63,18 @@ async def ws_readings(ws: WebSocket):
         print(f"WebSocket error: {e}")
     finally:
         broadcaster.unregister(ws)
+
+@router.websocket("/ws/nodes")
+async def ws_nodes(ws: WebSocket):
+    await ws.accept()
+    broadcaster = ws.app.state.node_update_broadcaster  # Use separate broadcaster for node updates
+    broadcaster.register(ws)
+    try:
+        while True:
+            await ws.receive_text()  # Keep connection open, ignore incoming messages
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
+        broadcaster.unregister(ws) 
     
     

@@ -27,7 +27,8 @@ app = FastAPI()
 
 # Store broadcaster in app.state for access across routers
 app.state.broadcaster = Broadcaster()
-app.state.text_message_broadcaster = Broadcaster()  # Separate broadcaster for DM updates if needed
+app.state.text_message_broadcaster = Broadcaster()  # Separate broadcaster for DM updates
+app.state.node_update_broadcaster = Broadcaster()  # Separate broadcaster for node updates
 worker = None
 app.state.pending ={}
 
@@ -54,6 +55,7 @@ async def startup_event():
   # store event loop reference for thread -> websocket
   app.state.broadcaster.set_loop(asyncio.get_running_loop())
   app.state.text_message_broadcaster.set_loop(asyncio.get_running_loop())
+  app.state.node_update_broadcaster.set_loop(asyncio.get_running_loop())
   #line_iter = iter_serial_lines(port="COM3", baud=9600)  # Update with your serial port and baudrate
   # line_iter = iter_fake_lines()
   # global worker
