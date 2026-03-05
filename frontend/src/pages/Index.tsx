@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Map, GitBranch, Server, MessageSquare, Route, MapPin } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -21,6 +22,15 @@ const tabs = [
 
 const Index = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("s1");
+  const navigate = useNavigate();
+
+  // Check if COM port is selected, redirect to init screen if not
+  useEffect(() => {
+    const selectedComPort = localStorage.getItem('selectedComPort');
+    if (!selectedComPort) {
+      navigate('/');
+    }
+  }, [navigate]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
