@@ -11,6 +11,7 @@ import MessagesView from "@/components/dashboard/MessagesView";
 import RouteAnalysis from "@/components/dashboard/RouteAnalysis";
 import OfflineMapView from "@/components/dashboard/OfflineMapView";
 import { useNodesContext } from "@/contexts/NodesContext";
+import { MessagesProvider } from "@/contexts/MessagesContext";
 
 const tabs = [
   { value: "offline-map", label: "Offline Map", icon: MapPin },
@@ -42,9 +43,10 @@ const Index = () => {
   }, [nodes, selectedNodeId]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      {/* Persistent SDN Node Sidebar */}
-      <NodeDetailsSidebar selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+    <MessagesProvider>
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        {/* Persistent SDN Node Sidebar */}
+        <NodeDetailsSidebar selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -89,6 +91,7 @@ const Index = () => {
         </Tabs>
       </div>
     </div>
+    </MessagesProvider>
   );
 };
 
