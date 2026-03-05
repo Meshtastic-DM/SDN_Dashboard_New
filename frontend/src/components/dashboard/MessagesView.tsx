@@ -12,6 +12,15 @@ export default function MessagesView() {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Helper function to normalize hex IDs (remove 0x prefix, lowercase)
+  const normalizeId = (id: string | null): string => {
+    if (!id) return '';
+    // Remove common prefixes: 0x, !, 0000, and lowercase
+    return id.toLowerCase()
+      .replace(/^0x/, '')
+      .replace(/^!/, '');
+  };
+
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,11 +41,20 @@ export default function MessagesView() {
       messages: Message[];
     }>();
 
-    // Show all nodes initially, even without messages
+    // Create a map of normalized IDs to node info for quick lookup
+    const nodeMap = new Map<string, typeof nodes[0]>();
     nodes.forEach(node => {
-      if (node.id !== localNodeId) { // Don't show local node in list
-        conversationMap.set(node.id, {
-          nodeId: node.id,
+      const normalizedId = normalizeId(node.id);
+      nodeMap.set(normalizedId, node);
+    });
+
+    // Show all nodes initially, even without messages
+    const normalizedLocalId = normalizeId(localNodeId);
+    nodes.forEach(node => {
+      const normalizedNodeId = normalizeId(node.id);
+      if (normalizedNodeId !== normalizedLocalId) { // Don't show local node in list
+        conversationMap.set(normalizedNodeId, {
+          nodeId: node.id, // Keep original format for display
           nodeName: node.name || node.id,
           lastMessage: null,
           messages: [],
@@ -52,18 +70,24 @@ export default function MessagesView() {
       const otherNodeId = message.sent_by_me ? message.destination_id : message.source_id;
       
       // Skip if it's a message to/from self or null
-      if (!otherNodeId || otherNodeId === localNodeId) return;
+      if (!otherNodeId) return;
+      
+      const normalizedOtherId = normalizeId(otherNodeId);
+      const normalizedLocalId = normalizeId(localNodeId);
+      
+      if (normalizedOtherId === normalizedLocalId) return;
 
-      if (!conversationMap.has(otherNodeId)) {
-        // Node not in list (maybe deleted/new), create entry
-        conversationMap.set(otherNodeId, {
-          nodeId: otherNodeId,
-          nodeName: otherNodeId,
+      if (!conversationMap.has(normalizedOtherId)) {
+        // Node not in list (maybe deleted/new), try to find the node info
+        const nodeInfo = nodeMap.get(normalizedOtherId);
+        conversationMap.set(normalizedOtherId, {
+          nodeId: nodeInfo?.id || otherNodeId,
+          nodeName: nodeInfo?.name || otherNodeId,
           lastMessage: message,
           messages: [message],
         });
       } else {
-        const conv = conversationMap.get(otherNodeId)!;
+        const conv = conversationMap.get(normalizedOtherId)!;
         conv.messages.push(message);
         
         // Update last message if this one is newer
@@ -89,7 +113,8 @@ export default function MessagesView() {
   const currentMessages = useMemo(() => {
     if (!selectedNodeId) return [];
     
-    const conversation = conversations.find(c => c.nodeId === selectedNodeId);
+    const normalizedSelectedId = normalizeId(selectedNodeId);
+    const conversation = conversations.find(c => normalizeId(c.nodeId) === normalizedSelectedId);
     return conversation?.messages.sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     ) || [];
@@ -107,7 +132,9 @@ export default function MessagesView() {
 
     try {
       setSending(true);
-      await sendMessage(selectedNodeId, messageText.trim());
+      // Backend expects format like "6c7428d0" (no 0x prefix)
+      const cleanId = selectedNodeId.replace(/^0x/, '');
+      await sendMessage(cleanId, messageText.trim());
       setMessageText('');
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -152,13 +179,13 @@ export default function MessagesView() {
     if (!sentByMe) return null;
     
     switch (ackStatus) {
-      case 2: // Delivered and read
+      case 1: // ACKED (Delivered)
         return <CheckCheck className="h-3 w-3 text-blue-500" />;
-      case 1: // Delivered
-        return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
-      case 0: // Sent
+      case 0: // Pending/Sent
         return <Check className="h-3 w-3 text-muted-foreground" />;
-      default: // Pending
+      case -1: // NAKED (Failed/Error)
+        return <Check className="h-3 w-3 text-red-500" />;
+      default: // Unknown
         return <Clock className="h-3 w-3 text-muted-foreground" />;
     }
   };

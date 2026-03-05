@@ -7,6 +7,7 @@ interface UseMessagesReturn {
   error: string | null;
   wsConnected: boolean;
   sendMessage: (destinationId: string, text: string) => Promise<void>;
+  refetchMessages: () => Promise<void>;
 }
 
 const WS_BASE_URL = 'ws://localhost:8000';
@@ -20,27 +21,29 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
+  // Function to fetch messages from REST API
+  const fetchMessages = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/texting/all_messages`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch messages: ${response.statusText}`);
+      }
+      const data = await response.json();
+      // Backend returns { status: "success", messages: [...] }
+      const messages = data.messages || [];
+      setMessages(messages);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch messages');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch initial messages from REST API
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/texting/all_messages`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch messages: ${response.statusText}`);
-        }
-        const data = await response.json();
-        // Backend returns { status: "success", messages: [...] }
-        setMessages(data.messages || []);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching messages:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch messages');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchMessages();
   }, []);
 
@@ -64,25 +67,59 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
         return;
       }
 
-      console.log('Connecting to messages WebSocket...');
       const ws = new WebSocket(`${WS_BASE_URL}/api/texting/ws/texts`);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('Messages WebSocket connected');
         setWsConnected(true);
         setError(null);
       };
 
       ws.onmessage = (event) => {
         try {
-          const message: Message = JSON.parse(event.data);
-          console.log('Received message:', message);
+          const rawMessage = JSON.parse(event.data);
           
-          // Add new message to the list
-          setMessages(prev => [...prev, message]);
+          // Transform backend format to frontend format
+          const message: Message = {
+            mes_id: rawMessage.id || rawMessage.mes_id,
+            source_id: rawMessage.source || rawMessage.source_id,
+            destination_id: rawMessage.destination || rawMessage.destination_id,
+            text: rawMessage.text,
+            timestamp: typeof rawMessage.timestamp === 'number' 
+              ? new Date(rawMessage.timestamp * 1000).toISOString() 
+              : rawMessage.timestamp,
+            rssi: rawMessage.rssi,
+            channel: rawMessage.channel,
+            conversation: rawMessage.conversation,
+            sent_by_me: rawMessage.sent_by_me || false,
+            ack_status: typeof rawMessage.ack_status === 'string'
+              ? (rawMessage.ack_status === 'ACKED' ? 1 : rawMessage.ack_status === 'NAKED' ? -1 : 0)
+              : (rawMessage.ack_status || 0),
+            ack_timestamp: rawMessage.ack_timestamp 
+              ? (typeof rawMessage.ack_timestamp === 'number' 
+                  ? new Date(rawMessage.ack_timestamp * 1000).toISOString() 
+                  : rawMessage.ack_timestamp)
+              : null
+          };
+          
+          // Check if this message already exists (for ACK updates)
+          setMessages(prev => {
+            const existingIndex = prev.findIndex(
+              m => m.mes_id === message.mes_id
+            );
+            
+            if (existingIndex !== -1) {
+              // Update existing message (ACK status change or filling in source_id)
+              const updated = [...prev];
+              updated[existingIndex] = message;
+              return updated;
+            } else {
+              // Add new message
+              return [...prev, message];
+            }
+          });
         } catch (err) {
-          console.error('Error parsing message:', err);
+          console.error('Error parsing WebSocket message:', err);
         }
       };
 
@@ -92,14 +129,12 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
       };
 
       ws.onclose = () => {
-        console.log('Messages WebSocket disconnected');
         setWsConnected(false);
         wsRef.current = null;
 
         // Attempt to reconnect after 3 seconds if we should still be connected
         if (shouldConnect) {
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('Attempting to reconnect messages WebSocket...');
             connectWebSocket();
           }, 3000);
         }
@@ -122,6 +157,26 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
 
   // Function to send a message
   const sendMessage = async (destinationId: string, text: string) => {
+    // Generate temporary ID for optimistic update
+    const tempId = Date.now();
+    
+    // Optimistically add message to UI immediately
+    const optimisticMessage: Message = {
+      mes_id: tempId,
+      source_id: null,
+      destination_id: destinationId.startsWith('0x') ? destinationId : `0x${destinationId}`,
+      text: text,
+      timestamp: new Date().toISOString(),
+      rssi: null,
+      channel: null,
+      conversation: destinationId.startsWith('0x') ? destinationId : `0x${destinationId}`,
+      sent_by_me: true,
+      ack_status: 0,
+      ack_timestamp: null
+    };
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    
     try {
       // Backend expects 'destination' and 'text' parameters
       const url = `${API_BASE_URL}/api/texting/send?destination=${encodeURIComponent(destinationId)}&text=${encodeURIComponent(text)}`;
@@ -131,6 +186,9 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
       });
 
       if (!response.ok) {
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.mes_id !== tempId));
+        
         let errorMessage = `Failed to send message: ${response.statusText}`;
         try {
           const errorData = await response.json();
@@ -140,7 +198,7 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
             if (typeof errorData.detail === 'string') {
               errorMessage = errorData.detail;
             } else if (Array.isArray(errorData.detail)) {
-              errorMessage = errorData.detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
+              errorMessage = errorData.detail.map((e: { msg?: string }) => e.msg || JSON.stringify(e)).join(', ');
             } else {
               errorMessage = JSON.stringify(errorData.detail);
             }
@@ -153,9 +211,14 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
       }
 
       const result = await response.json();
-      console.log('Message sent successfully:', result);
       
-      // Message will be received via WebSocket
+      // Replace optimistic message with real one when WebSocket broadcasts it
+      // The WebSocket handler will update it with the real mes_id
+      if (result.mes_id) {
+        setMessages(prev => prev.map(m => 
+          m.mes_id === tempId ? { ...m, mes_id: result.mes_id } : m
+        ));
+      }
     } catch (err) {
       console.error('Error sending message:', err);
       throw err;
@@ -168,5 +231,6 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
     error,
     wsConnected,
     sendMessage,
+    refetchMessages: fetchMessages,
   };
 }
