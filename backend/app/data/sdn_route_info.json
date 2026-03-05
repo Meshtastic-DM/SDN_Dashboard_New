@@ -1,0 +1,1136 @@
+[
+  {
+    "selfId": 0,
+    "destId": 2,
+    "nextHop": 2,
+    "hopCount": 1,
+    "destSeqNum": 22,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 325269.7668691763
+  },
+  {
+    "selfId": 0,
+    "destId": 2,
+    "nextHop": 2,
+    "hopCount": 1,
+    "destSeqNum": 22,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 325269.7668691763
+  },
+  {
+    "selfId": 4,
+    "destId": 2,
+    "nextHop": 2,
+    "hopCount": 1,
+    "destSeqNum": 22,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 325269.7668691763
+  },
+  {
+    "selfId": 5,
+    "destId": 2,
+    "nextHop": 2,
+    "hopCount": 1,
+    "destSeqNum": 22,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 325269.7668691763
+  },
+  {},
+  {},
+  {
+    "selfId": 9,
+    "destId": 32,
+    "nextHop": 32,
+    "hopCount": 1,
+    "destSeqNum": 4,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 313126.66717064753
+  },
+  {
+    "selfId": 5,
+    "destId": 4,
+    "nextHop": 4,
+    "hopCount": 1,
+    "destSeqNum": 39,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 10,
+    "destId": 3,
+    "nextHop": 3,
+    "hopCount": 1,
+    "destSeqNum": 23,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 331188.7748691763
+  },
+  {
+    "selfId": 9,
+    "destId": 1,
+    "nextHop": 1,
+    "hopCount": 1,
+    "destSeqNum": 21,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 324240.528
+  },
+  {
+    "selfId": 4,
+    "destId": 5,
+    "nextHop": 5,
+    "hopCount": 1,
+    "destSeqNum": 42,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 9,
+    "destId": 25,
+    "nextHop": 24,
+    "hopCount": 2,
+    "destSeqNum": 47,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 30,
+    "destId": 4,
+    "nextHop": 4,
+    "hopCount": 1,
+    "destSeqNum": 39,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 327151.1908691763
+  },
+  {
+    "selfId": 30,
+    "destId": 13,
+    "nextHop": 13,
+    "hopCount": 1,
+    "destSeqNum": 20,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 13,
+    "nextHop": 30,
+    "hopCount": 2,
+    "destSeqNum": 20,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 30,
+    "nextHop": 30,
+    "hopCount": 1,
+    "destSeqNum": 104,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 32,
+    "nextHop": 32,
+    "hopCount": 1,
+    "destSeqNum": 4,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 313126.66717064753
+  },
+  {
+    "selfId": 5,
+    "destId": 2,
+    "nextHop": 2,
+    "hopCount": 1,
+    "destSeqNum": 22,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 10,
+    "nextHop": 10,
+    "hopCount": 1,
+    "destSeqNum": 51,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 334074.2148691763
+  },
+  {
+    "selfId": 11,
+    "destId": 3,
+    "nextHop": 3,
+    "hopCount": 1,
+    "destSeqNum": 23,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 331188.7748691763
+  },
+  {
+    "selfId": 0,
+    "destId": 5,
+    "nextHop": 2,
+    "hopCount": 2,
+    "destSeqNum": 127,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 5,
+    "nextHop": 2,
+    "hopCount": 2,
+    "destSeqNum": 127,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 11,
+    "destId": 10,
+    "nextHop": 10,
+    "hopCount": 1,
+    "destSeqNum": 51,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 17,
+    "nextHop": 17,
+    "hopCount": 1,
+    "destSeqNum": 92,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 32,
+    "destId": 31,
+    "nextHop": 31,
+    "hopCount": 1,
+    "destSeqNum": 2,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 301695.8948691763
+  },
+  {
+    "selfId": 5,
+    "destId": 30,
+    "nextHop": 4,
+    "hopCount": 2,
+    "destSeqNum": 104,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 11,
+    "nextHop": 10,
+    "hopCount": 2,
+    "destSeqNum": 55,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 32,
+    "destId": 18,
+    "nextHop": 18,
+    "hopCount": 1,
+    "destSeqNum": 82,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 9,
+    "destId": 18,
+    "nextHop": 32,
+    "hopCount": 2,
+    "destSeqNum": 82,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 19,
+    "destId": 18,
+    "nextHop": 18,
+    "hopCount": 1,
+    "destSeqNum": 13,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 314421.72675321315
+  },
+  {
+    "selfId": 32,
+    "destId": 10,
+    "nextHop": 31,
+    "hopCount": 2,
+    "destSeqNum": 51,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 11,
+    "nextHop": 11,
+    "hopCount": 1,
+    "destSeqNum": 65,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 30,
+    "destId": 27,
+    "nextHop": 27,
+    "hopCount": 1,
+    "destSeqNum": 135,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 11,
+    "nextHop": 3,
+    "hopCount": 2,
+    "destSeqNum": 65,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 11,
+    "destId": 32,
+    "nextHop": 31,
+    "hopCount": 2,
+    "destSeqNum": 89,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 10,
+    "nextHop": 3,
+    "hopCount": 2,
+    "destSeqNum": 246,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 10,
+    "nextHop": 3,
+    "hopCount": 2,
+    "destSeqNum": 246,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 5,
+    "destId": 14,
+    "nextHop": 15,
+    "hopCount": 2,
+    "destSeqNum": 267,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 9,
+    "destId": 19,
+    "nextHop": 18,
+    "hopCount": 2,
+    "destSeqNum": 222,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 9,
+    "nextHop": 1,
+    "hopCount": 2,
+    "destSeqNum": 298,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 9,
+    "nextHop": 1,
+    "hopCount": 2,
+    "destSeqNum": 298,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 10,
+    "destId": 0,
+    "nextHop": 3,
+    "hopCount": 2,
+    "destSeqNum": 272,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 38,
+    "destId": 11,
+    "nextHop": 11,
+    "hopCount": 1,
+    "destSeqNum": 65,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 18,
+    "destId": 1,
+    "nextHop": 9,
+    "hopCount": 2,
+    "destSeqNum": 21,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 5,
+    "destId": 15,
+    "nextHop": 15,
+    "hopCount": 1,
+    "destSeqNum": 323,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 15,
+    "nextHop": 5,
+    "hopCount": 2,
+    "destSeqNum": 323,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 27,
+    "destId": 26,
+    "nextHop": 26,
+    "hopCount": 1,
+    "destSeqNum": 169,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 10,
+    "destId": 38,
+    "nextHop": 11,
+    "hopCount": 2,
+    "destSeqNum": 194,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 38,
+    "destId": 22,
+    "nextHop": 22,
+    "hopCount": 1,
+    "destSeqNum": 189,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 11,
+    "destId": 22,
+    "nextHop": 38,
+    "hopCount": 2,
+    "destSeqNum": 189,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 5,
+    "destId": 6,
+    "nextHop": 6,
+    "hopCount": 1,
+    "destSeqNum": 352,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 6,
+    "nextHop": 6,
+    "hopCount": 1,
+    "destSeqNum": 352,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 17,
+    "destId": 11,
+    "nextHop": 31,
+    "hopCount": 2,
+    "destSeqNum": 65,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 29,
+    "nextHop": 30,
+    "hopCount": 2,
+    "destSeqNum": 256,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 38,
+    "nextHop": 11,
+    "hopCount": 2,
+    "destSeqNum": 217,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 5,
+    "destId": 36,
+    "nextHop": 15,
+    "hopCount": 2,
+    "destSeqNum": 369,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 5,
+    "destId": 34,
+    "nextHop": 15,
+    "hopCount": 2,
+    "destSeqNum": 397,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 20,
+    "destId": 21,
+    "nextHop": 21,
+    "hopCount": 1,
+    "destSeqNum": 11,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 311770.42316606507
+  },
+  {
+    "selfId": 20,
+    "destId": 17,
+    "nextHop": 17,
+    "hopCount": 1,
+    "destSeqNum": 92,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 353350.6531220727
+  },
+  {
+    "selfId": 38,
+    "destId": 3,
+    "nextHop": 11,
+    "hopCount": 2,
+    "destSeqNum": 23,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 5,
+    "destId": 16,
+    "nextHop": 15,
+    "hopCount": 2,
+    "destSeqNum": 446,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 42,
+    "nextHop": 17,
+    "hopCount": 2,
+    "destSeqNum": 373,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 25,
+    "destId": 9,
+    "nextHop": 24,
+    "hopCount": 2,
+    "destSeqNum": 419,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 4,
+    "nextHop": 2,
+    "hopCount": 2,
+    "destSeqNum": 471,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 4,
+    "nextHop": 2,
+    "hopCount": 2,
+    "destSeqNum": 471,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 22,
+    "destId": 20,
+    "nextHop": 21,
+    "hopCount": 2,
+    "destSeqNum": 450,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 30,
+    "destId": 28,
+    "nextHop": 13,
+    "hopCount": 2,
+    "destSeqNum": 346,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 26,
+    "destId": 28,
+    "nextHop": 13,
+    "hopCount": 2,
+    "destSeqNum": 346,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 9,
+    "destId": 23,
+    "nextHop": 24,
+    "hopCount": 2,
+    "destSeqNum": 497,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 27,
+    "destId": 28,
+    "nextHop": 13,
+    "hopCount": 2,
+    "destSeqNum": 346,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 18,
+    "destId": 17,
+    "nextHop": 17,
+    "hopCount": 1,
+    "destSeqNum": 485,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 9,
+    "destId": 17,
+    "nextHop": 18,
+    "hopCount": 2,
+    "destSeqNum": 485,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 26,
+    "nextHop": 30,
+    "hopCount": 2,
+    "destSeqNum": 395,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 24,
+    "destId": 18,
+    "nextHop": 9,
+    "hopCount": 2,
+    "destSeqNum": 578,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 11,
+    "destId": 37,
+    "nextHop": 38,
+    "hopCount": 2,
+    "destSeqNum": 663,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 22,
+    "destId": 37,
+    "nextHop": 38,
+    "hopCount": 2,
+    "destSeqNum": 663,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 11,
+    "destId": 22,
+    "nextHop": 22,
+    "hopCount": 1,
+    "destSeqNum": 694,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 11,
+    "destId": 20,
+    "nextHop": 22,
+    "hopCount": 2,
+    "destSeqNum": 718,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 38,
+    "destId": 20,
+    "nextHop": 22,
+    "hopCount": 2,
+    "destSeqNum": 718,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 32,
+    "destId": 19,
+    "nextHop": 18,
+    "hopCount": 2,
+    "destSeqNum": 759,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 22,
+    "destId": 17,
+    "nextHop": 20,
+    "hopCount": 2,
+    "destSeqNum": 823,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {},
+  {},
+  {},
+  {
+    "selfId": 12,
+    "destId": 25,
+    "nextHop": 25,
+    "hopCount": 1,
+    "destSeqNum": 47,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 329806.92713311384
+  },
+  {},
+  {
+    "selfId": 14,
+    "destId": 3,
+    "nextHop": 3,
+    "hopCount": 1,
+    "destSeqNum": 876,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 6,
+    "destId": 7,
+    "nextHop": 7,
+    "hopCount": 1,
+    "destSeqNum": 9,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 309150.6948691763
+  },
+  {
+    "selfId": 14,
+    "destId": 34,
+    "nextHop": 34,
+    "hopCount": 1,
+    "destSeqNum": 96,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 351372.01618997543
+  },
+  {
+    "selfId": 25,
+    "destId": 1,
+    "nextHop": 12,
+    "hopCount": 2,
+    "destSeqNum": 874,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 14,
+    "destId": 33,
+    "nextHop": 33,
+    "hopCount": 1,
+    "destSeqNum": 111,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 354110.11221135815
+  },
+  {
+    "selfId": 28,
+    "destId": 25,
+    "nextHop": 25,
+    "hopCount": 1,
+    "destSeqNum": 47,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 329806.92713311384
+  },
+  {
+    "selfId": 6,
+    "destId": 5,
+    "nextHop": 5,
+    "hopCount": 1,
+    "destSeqNum": 42,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 331398.9508691763
+  },
+  {
+    "selfId": 15,
+    "destId": 36,
+    "nextHop": 36,
+    "hopCount": 1,
+    "destSeqNum": 30,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 327523.0628691763
+  },
+  {
+    "selfId": 14,
+    "destId": 15,
+    "nextHop": 15,
+    "hopCount": 1,
+    "destSeqNum": 309,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 499288.9412104472
+  },
+  {
+    "selfId": 14,
+    "destId": 3,
+    "nextHop": 3,
+    "hopCount": 1,
+    "destSeqNum": 876,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 1247947.6639999999
+  },
+  {
+    "selfId": 22,
+    "destId": 21,
+    "nextHop": 21,
+    "hopCount": 1,
+    "destSeqNum": 869,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 28,
+    "destId": 12,
+    "nextHop": 12,
+    "hopCount": 1,
+    "destSeqNum": 74,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 341652.27974145435
+  },
+  {
+    "selfId": 38,
+    "destId": 21,
+    "nextHop": 22,
+    "hopCount": 2,
+    "destSeqNum": 869,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 25,
+    "destId": 28,
+    "nextHop": 28,
+    "hopCount": 1,
+    "destSeqNum": 8,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 308609.7527007034
+  },
+  {
+    "selfId": 25,
+    "destId": 24,
+    "nextHop": 24,
+    "hopCount": 1,
+    "destSeqNum": 86,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 355090.1120000001
+  },
+  {
+    "selfId": 34,
+    "destId": 36,
+    "nextHop": 36,
+    "hopCount": 1,
+    "destSeqNum": 254,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 446416.4068691764
+  },
+  {
+    "selfId": 8,
+    "destId": 6,
+    "nextHop": 6,
+    "hopCount": 1,
+    "destSeqNum": 352,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 546101.4234091631
+  },
+  {
+    "selfId": 34,
+    "destId": 35,
+    "nextHop": 35,
+    "hopCount": 1,
+    "destSeqNum": 491,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 709616.3972829465
+  },
+  {
+    "selfId": 36,
+    "destId": 15,
+    "nextHop": 15,
+    "hopCount": 1,
+    "destSeqNum": 309,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 499288.9412104472
+  },
+  {
+    "selfId": 10,
+    "destId": 21,
+    "nextHop": 22,
+    "hopCount": 2,
+    "destSeqNum": 977,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 13,
+    "destId": 12,
+    "nextHop": 12,
+    "hopCount": 1,
+    "destSeqNum": 756,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 1068543.1638596733
+  },
+  {
+    "selfId": 13,
+    "destId": 26,
+    "nextHop": 26,
+    "hopCount": 1,
+    "destSeqNum": 360,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 553770.9912512298
+  },
+  {
+    "selfId": 12,
+    "destId": 27,
+    "nextHop": 13,
+    "hopCount": 2,
+    "destSeqNum": 1061,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 0,
+    "destId": 12,
+    "nextHop": 1,
+    "hopCount": 2,
+    "destSeqNum": 1221,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 27,
+    "nextHop": 30,
+    "hopCount": 2,
+    "destSeqNum": 1275,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 10,
+    "destId": 20,
+    "nextHop": 22,
+    "hopCount": 2,
+    "destSeqNum": 1538,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 17,
+    "destId": 20,
+    "nextHop": 20,
+    "hopCount": 1,
+    "destSeqNum": 1538,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 18,
+    "destId": 20,
+    "nextHop": 17,
+    "hopCount": 2,
+    "destSeqNum": 1538,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 31,
+    "destId": 20,
+    "nextHop": 17,
+    "hopCount": 2,
+    "destSeqNum": 1538,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {},
+  {},
+  {
+    "selfId": 30,
+    "destId": 6,
+    "nextHop": 4,
+    "hopCount": 2,
+    "destSeqNum": 3214,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 4,
+    "destId": 0,
+    "nextHop": 2,
+    "hopCount": 2,
+    "destSeqNum": 3471,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {
+    "selfId": 5,
+    "destId": 0,
+    "nextHop": 2,
+    "hopCount": 2,
+    "destSeqNum": 3471,
+    "valid": true,
+    "precursorList": [],
+    "lifeTime": 300000
+  },
+  {},
+  {},
+  {},
+  {},
+  {},
+  {}
+]

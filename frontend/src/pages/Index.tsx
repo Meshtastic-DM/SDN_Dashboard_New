@@ -1,0 +1,76 @@
+import { useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Map, GitBranch, Server, MessageSquare, Route, MapPin } from "lucide-react";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import NodeDetailsSidebar from "@/components/dashboard/NodeDetailsSidebar";
+import MapView from "@/components/dashboard/MapView";
+import TopologyView from "@/components/dashboard/TopologyView";
+import ExtendedNodeView from "@/components/dashboard/ExtendedNodeView";
+import MessagingWindow from "@/components/dashboard/MessagingWindow";
+import RouteAnalysis from "@/components/dashboard/RouteAnalysis";
+import OfflineMapView from "@/components/dashboard/OfflineMapView";
+
+const tabs = [
+  { value: "offline-map", label: "Offline Map", icon: MapPin },
+  { value: "map", label: "Map View", icon: Map },
+  { value: "topology", label: "Topology", icon: GitBranch },
+  { value: "nodes", label: "Nodes", icon: Server },
+  { value: "messages", label: "Messages", icon: MessageSquare },
+  { value: "routes", label: "Routes", icon: Route },
+];
+
+const Index = () => {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>("s1");
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      {/* Persistent SDN Node Sidebar */}
+      <NodeDetailsSidebar selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardHeader />
+
+        <Tabs defaultValue="offline-map" className="flex-1 flex flex-col overflow-hidden">
+          <div className="border-b border-border bg-card px-4">
+            <TabsList className="bg-transparent h-10 gap-1">
+              {tabs.map(tab => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="font-mono text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:glow-green data-[state=active]:border-primary/30 data-[state=active]:border rounded-md px-3 py-1.5 text-muted-foreground hover:text-card-foreground transition-all gap-1.5"
+                >
+                  <tab.icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          <div className="flex-1 overflow-hidden p-4">
+            <TabsContent value="offline-map" className="h-full m-0">
+              <OfflineMapView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+            </TabsContent>
+            <TabsContent value="map" className="h-full m-0">
+              <MapView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+            </TabsContent>
+            <TabsContent value="topology" className="h-full m-0">
+              <TopologyView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+            </TabsContent>
+            <TabsContent value="nodes" className="h-full m-0">
+              <ExtendedNodeView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+            </TabsContent>
+            <TabsContent value="messages" className="h-full m-0">
+              <MessagingWindow />
+            </TabsContent>
+            <TabsContent value="routes" className="h-full m-0">
+              <RouteAnalysis />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default Index;
