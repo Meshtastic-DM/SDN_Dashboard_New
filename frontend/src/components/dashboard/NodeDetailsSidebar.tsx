@@ -19,6 +19,9 @@ interface Props {
 export default function NodeDetailsSidebar({ selectedNodeId, onSelectNode }: Props) {
   const { nodes, loading, error, selfNodeId } = useNodesContext();
   
+  // Filter to show only online nodes
+  const filteredNodes = nodes.filter(n => n.status === "online");
+  
   // Find selected node, or default to self node if nothing selected
   const selected = nodes.find(n => n.id === selectedNodeId) || 
                    (selfNodeId ? nodes.find(n => n.id.slice(-7) === selfNodeId.slice(-7)) : null);
@@ -32,7 +35,7 @@ export default function NodeDetailsSidebar({ selectedNodeId, onSelectNode }: Pro
           <h2 className="font-mono text-sm font-semibold text-primary glow-text-green">MESHTASTIC NODES</h2>
         </div>
         <p className="text-xs text-muted-foreground mt-1 font-mono">
-          {loading ? "Loading..." : `${nodes.filter(n => n.status === "online").length}/${nodes.length} online`}
+          {loading ? "Loading..." : `${filteredNodes.length} online nodes`}
         </p>
       </div>
 
@@ -46,12 +49,12 @@ export default function NodeDetailsSidebar({ selectedNodeId, onSelectNode }: Pro
           <div className="p-3 text-xs text-red-500 font-mono">
             {error}
           </div>
-        ) : nodes.length === 0 ? (
+        ) : filteredNodes.length === 0 ? (
           <div className="p-3 text-xs text-muted-foreground font-mono">
-            No nodes found
+            No online nodes found
           </div>
         ) : (
-          nodes.map(node => {
+          filteredNodes.map(node => {
             const isSelf = selfNodeId && node.id.slice(-7) === selfNodeId.slice(-7);
             return (
               <button
