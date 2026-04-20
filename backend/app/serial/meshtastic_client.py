@@ -109,6 +109,22 @@ def on_receive(packet, interface):
                 print(f"  RX Bad: {list(lq.rx_bad)}")
                 print(f"  Channel Util: {getattr(lq, 'channel_utilization', 'N/A')}")
                 print(f"  Air Util TX: {getattr(lq, 'air_util_tx', 'N/A')}")
+                
+                # Save link quality report to database
+                try:
+                    from app.services.link_quality_service import save_link_quality_report
+                    reporter_bytes = packet.get('from').to_bytes(4, byteorder='big')
+                    relay_nodes = [n.to_bytes(4, byteorder='big') for n in lq.relay_node]
+                    save_link_quality_report(
+                        reporter=reporter_bytes,
+                        relay_nodes=relay_nodes,
+                        rx_good=list(lq.rx_good),
+                        rx_bad=list(lq.rx_bad),
+                        channel_util=getattr(lq, 'channel_utilization', 0.0),
+                        air_util_tx=getattr(lq, 'air_util_tx', 0.0)
+                    )
+                except Exception as e:
+                    print(f" Failed to save link quality report: {e}")
             else:
                 print("  Type: Unknown SDN message")
                 print(f"  SDN Raw: {sdn_msg}")
