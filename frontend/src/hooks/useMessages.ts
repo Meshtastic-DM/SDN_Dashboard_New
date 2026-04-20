@@ -105,9 +105,9 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
           // Check if this message already exists (for ACK updates)
           setMessages(prev => {
             // First check for exact mes_id match (for ACK status updates on existing messages)
+            // mes_id is the unique identifier, so it's the only condition needed
             const existingIndex = prev.findIndex(
-              m => String(m.mes_id) === String(message.mes_id) && 
-                   m.source_id === message.source_id
+              m => String(m.mes_id) === String(message.mes_id)
             );
             
             if (existingIndex !== -1) {
