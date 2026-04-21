@@ -59,6 +59,7 @@ def get_link_quality_reports(
         unique_relay_nodes = set()
         total_channel_util = 0
         total_air_util_tx = 0
+        measurement_count = 0
         
         for report in formatted_reports:
             for i in range(len(report["rx_good"])):
@@ -67,6 +68,7 @@ def get_link_quality_reports(
                 total = good + bad
                 if total > 0:
                     total_quality += (good / total) * 100
+                    measurement_count += 1
                     # Track unique relay node IDs
                     unique_relay_nodes.add(report["relay_nodes"][i])
             
@@ -75,7 +77,7 @@ def get_link_quality_reports(
         
         total_relays = len(unique_relay_nodes)
         stats = {
-            "avg_quality": total_quality / total_relays if total_relays > 0 else 0,
+            "avg_quality": total_quality / measurement_count if measurement_count > 0 else 0,
             "total_relays": total_relays,
             "avg_channel_util": (total_channel_util / total_reports) * 100,
             "avg_air_util_tx": (total_air_util_tx / total_reports) * 100,
