@@ -23,6 +23,47 @@ def publish_node_update_to_websocket(app, node_info:dict):
     broadcaster.publish(node_info)
     print(f"Published node update to WebSocket: {node_info}")
 
+def _set_connection_status(app, *, connected: bool, status: str, message: str, interface=None):
+    """Update the Meshtastic connection status in app state"""
+    app.state.meshtastic_status = {
+        "connected": connected,
+        "status": status,
+        "message": message,
+        "port": getattr(app.state, "meshtastic_port", None),
+        "nodeId": None,
+    }
+
+    if connected and interface and getattr(interface, "myInfo", None):
+        app.state.meshtastic_status["nodeId"] = hex(interface.myInfo.my_node_num)
+        app.state.meshtastic_interface = interface
+    elif not connected:
+        app.state.meshtastic_interface = None
+
+def _handle_connection_event(interface=None, topic=pub.AUTO_TOPIC):
+    """Handle Meshtastic connection and disconnection events"""
+    app = getattr(interface, "app", None)
+    if not app:
+        return
+
+    topic_name = topic.getName() if topic else ""
+    if topic_name.endswith("connection.established"):
+        _set_connection_status(
+            app,
+            connected=True,
+            status="connected",
+            message="Meshtastic device connected",
+            interface=interface,
+        )
+        print("✓ Meshtastic connection established")
+    elif topic_name.endswith("connection.lost"):
+        _set_connection_status(
+            app,
+            connected=False,
+            status="disconnected",
+            message="Meshtastic serial port disconnected. Reconnect the device to the selected COM port to continue.",
+        )
+        print("✗ Meshtastic connection lost")
+
 def on_receive(packet, interface):
     """Callback function to handle incoming Meshtastic packets"""
     # print(f"Received packet: {packet}")
@@ -264,6 +305,28 @@ def get_meshtastic_port():
 
 def start_meshtastic_client(app, devPath=None):
     """Function to start the Meshtastic client and listen for packets"""
+    app.state.meshtastic_port = devPath
+    _set_connection_status(
+        app,
+        connected=False,
+        status="connecting",
+        message="Connecting to Meshtastic device...",
+    )
+
+    # Unsubscribe any existing handlers before subscribing new ones
+    try:
+        pub.unsubscribe(_handle_connection_event, "meshtastic.connection.established")
+    except Exception:
+        pass
+    try:
+        pub.unsubscribe(_handle_connection_event, "meshtastic.connection.lost")
+    except Exception:
+        pass
+    
+    # Subscribe to connection events
+    pub.subscribe(_handle_connection_event, "meshtastic.connection.established")
+    pub.subscribe(_handle_connection_event, "meshtastic.connection.lost")
+
     # If no port specified, try to detect it
     if not devPath:
         ports = get_meshtastic_port()
@@ -284,15 +347,34 @@ def start_meshtastic_client(app, devPath=None):
         interface.app = app  # Attach app reference for WebSocket publishing
         pub.subscribe(on_receive, "meshtastic.receive")
         print(f"✓ Meshtastic client started on {devPath} and listening for packets...")
+        _set_connection_status(
+            app,
+            connected=True,
+            status="connected",
+            message="Meshtastic device connected",
+            interface=interface,
+        )
         update_nodes_db(interface)  # Initial fetch of nodes to populate database
     except SystemExit as e:
         # Catch sys.exit() calls from Meshtastic library
         print(f"⚠️  Meshtastic client failed to start (SystemExit: {e})")
         print(f"   Check that {devPath} is the correct port and device is connected.")
+        _set_connection_status(
+            app,
+            connected=False,
+            status="error",
+            message=f"Meshtastic client failed to start: {e}",
+        )
         raise ValueError(f"Meshtastic client failed to start: {e}")
     except Exception as e:
         print(f"⚠️  Error starting Meshtastic client: {e}")
         print(f"   Application will continue without Meshtastic integration.")
+        _set_connection_status(
+            app,
+            connected=False,
+            status="error",
+            message=f"Meshtastic client failed to start: {e}",
+        )
         raise ValueError(f"Meshtastic client failed to start: {e}")
 
 
