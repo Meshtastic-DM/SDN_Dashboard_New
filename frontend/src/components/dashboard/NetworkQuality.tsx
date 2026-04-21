@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, Signal, Radio, TrendingUp, AlertCircle, RefreshCw } from "lucide-react";
+import { Activity, Signal, Radio, TrendingUp, AlertCircle, RefreshCw, ChevronLeft } from "lucide-react";
 import { LinkQualityReport } from "@/types/linkQuality";
 import { useLinkQuality } from "@/hooks/useLinkQuality";
 
@@ -23,11 +23,7 @@ const getQualityBgColor = (quality: number): string => {
 export default function NetworkQuality() {
   const { reports, stats, loading, error, refetch } = useLinkQuality(5000, 100);
   const [selectedReport, setSelectedReport] = useState<LinkQualityReport | null>(null);
-
-  // Auto-select first report when data loads
-  if (!selectedReport && reports.length > 0) {
-    setSelectedReport(reports[0]);
-  }
+  const [selectedReporter, setSelectedReporter] = useState<string | null>(null);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -38,9 +34,49 @@ export default function NetworkQuality() {
     return id.startsWith("0x") ? id : `0x${id}`;
   };
 
+  // Group reports by reporter node
+  const reportsByReporter = reports.reduce((acc, report) => {
+    const reporter = report.reporter;
+    if (!acc[reporter]) {
+      acc[reporter] = [];
+    }
+    acc[reporter].push(report);
+    return acc;
+  }, {} as Record<string, LinkQualityReport[]>);
+
+  // Get unique reporter nodes sorted by most recent report
+  const uniqueReporters = Object.entries(reportsByReporter)
+    .map(([reporter, reportsArray]) => ({
+      reporter,
+      reportCount: reportsArray.length,
+      lastReport: reportsArray[0],
+      avgQuality: (() => {
+        let totalQuality = 0;
+        let measurementCount = 0;
+        
+        reportsArray.forEach(report => {
+          for (let i = 0; i < report.rx_good.length; i++) {
+            totalQuality += calculateRelayQuality(report.rx_good[i], report.rx_bad[i]);
+            measurementCount += 1;
+          }
+        });
+        
+        return measurementCount > 0 ? totalQuality / measurementCount : 0;
+      })(),
+    }))
+    .sort((a, b) => new Date(b.lastReport.timestamp).getTime() - new Date(a.lastReport.timestamp).getTime());
+
+  // Filter reports by selected reporter
+  const filteredReports = selectedReporter ? reportsByReporter[selectedReporter] || [] : [];
+
+  // Auto-select first report when viewing a reporter's reports
+  if (selectedReporter && !selectedReport && filteredReports.length > 0) {
+    setSelectedReport(filteredReports[0]);
+  }
+
   return (
     <div className="h-full flex gap-4">
-      {/* Left Panel - Reports List */}
+      {/* Left Panel */}
       <div className="w-80 flex flex-col gap-4">
         {/* Network Stats Summary */}
         <div className="rounded-lg border border-border bg-card p-4">
@@ -94,60 +130,115 @@ export default function NetworkQuality() {
           </div>
         </div>
 
-        {/* Reports List */}
+        {/* Reporter Nodes or Reports List */}
         <div className="flex-1 rounded-lg border border-border bg-card overflow-hidden flex flex-col">
-          <div className="p-3 border-b border-border">
+          <div className="p-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
+              {selectedReporter && (
+                <button
+                  onClick={() => {
+                    setSelectedReporter(null);
+                    setSelectedReport(null);
+                  }}
+                  className="p-1 hover:bg-muted rounded transition-colors"
+                  title="Back to reporters"
+                >
+                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
               <Signal className="h-4 w-4 text-secondary" />
               <h3 className="font-mono text-sm font-semibold text-card-foreground">
-                QUALITY REPORTS ({stats.reports_count})
+                {selectedReporter ? (
+                  <span>REPORTS FROM {formatNodeId(selectedReporter)}</span>
+                ) : (
+                  <span>REPORTER NODES ({uniqueReporters.length})</span>
+                )}
               </h3>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto scrollbar-thin">
-            {loading && reports.length === 0 ? (
+            {loading && uniqueReporters.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground font-mono text-xs">
-                Loading reports...
+                Loading reporters...
               </div>
-            ) : reports.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground font-mono text-xs">
-                No link quality reports available
-              </div>
-            ) : (
-              reports.map(report => {
-                const avgQuality = report.rx_good.reduce((sum, good, idx) => 
-                  sum + calculateRelayQuality(good, report.rx_bad[idx]), 0
-                ) / report.rx_good.length;
+            ) : selectedReporter ? (
+              // Reports from selected reporter
+              filteredReports.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground font-mono text-xs">
+                  No reports from this reporter
+                </div>
+              ) : (
+                filteredReports.map(report => {
+                  const avgQuality = report.rx_good.reduce((sum, good, idx) => 
+                    sum + calculateRelayQuality(good, report.rx_bad[idx]), 0
+                  ) / report.rx_good.length;
 
-                return (
+                  return (
+                    <div
+                      key={report.report_id}
+                      onClick={() => setSelectedReport(report)}
+                      className={`p-3 border-b border-border cursor-pointer transition-colors ${
+                        selectedReport?.report_id === report.report_id
+                          ? "bg-primary/10 border-l-2 border-l-primary"
+                          : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-[10px] font-semibold text-muted-foreground">
+                          {report.relay_nodes.length} relays
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {formatTimestamp(report.timestamp)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`text-sm font-bold font-mono ${getQualityColor(avgQuality)}`}>
+                          {avgQuality.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )
+            ) : (
+              // Reporter nodes list
+              uniqueReporters.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground font-mono text-xs">
+                  No reporter nodes available
+                </div>
+              ) : (
+                uniqueReporters.map(({ reporter, reportCount, lastReport, avgQuality }) => (
                   <div
-                    key={report.report_id}
-                    onClick={() => setSelectedReport(report)}
-                    className={`p-3 border-b border-border cursor-pointer transition-colors ${
-                      selectedReport?.report_id === report.report_id
+                    key={reporter}
+                    onClick={() => {
+                      setSelectedReporter(reporter);
+                      setSelectedReport(null);
+                    }}
+                    className={`p-4 border-b border-border cursor-pointer transition-colors ${
+                      selectedReporter === reporter
                         ? "bg-primary/10 border-l-2 border-l-primary"
                         : "hover:bg-muted/50"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-xs font-semibold text-primary">
-                        {formatNodeId(report.reporter)}
+                      <span className="font-mono text-sm font-semibold text-primary">
+                        {formatNodeId(reporter)}
                       </span>
-                      <span className="text-[10px] font-mono text-muted-foreground">
-                        {formatTimestamp(report.timestamp)}
+                      <span className="text-[10px] font-mono text-muted-foreground px-2 py-1 bg-muted rounded">
+                        {reportCount} {reportCount === 1 ? "report" : "reports"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between">
                       <div className={`text-sm font-bold font-mono ${getQualityColor(avgQuality)}`}>
-                        {avgQuality.toFixed(1)}%
+                        Avg: {avgQuality.toFixed(1)}%
                       </div>
-                      <div className="text-xs font-mono text-muted-foreground">
-                        {report.relay_nodes.length} relays
-                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground">
+                        {formatTimestamp(lastReport.timestamp)}
+                      </span>
                     </div>
                   </div>
-                );
-              })
+                ))
+              )
             )}
           </div>
         </div>
