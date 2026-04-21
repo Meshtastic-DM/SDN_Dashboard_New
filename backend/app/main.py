@@ -34,6 +34,13 @@ app.state.text_message_broadcaster = Broadcaster()  # Separate broadcaster for D
 app.state.node_update_broadcaster = Broadcaster()  # Separate broadcaster for node updates
 worker = None
 app.state.pending ={}
+app.state.meshtastic_status = {
+  "connected": False,
+  "status": "disconnected",
+  "message": "Meshtastic device is not connected.",
+  "port": None,
+  "nodeId": None,
+}
 
 app.add_middleware(
   CORSMiddleware,
