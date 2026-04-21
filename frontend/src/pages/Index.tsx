@@ -13,6 +13,8 @@ import OfflineMapView from "@/components/dashboard/OfflineMapView";
 import NetworkQuality from "@/components/dashboard/NetworkQuality";
 import { useNodesContext } from "@/contexts/NodesContext";
 import { MessagesProvider } from "@/contexts/MessagesContext";
+import { useMeshtasticConnectionStatus } from "@/hooks/useMeshtasticConnection";
+import { DeviceDisconnectionOverlay } from "@/components/DeviceDisconnectionOverlay";
 
 const tabs = [
   { value: "offline-map", label: "Offline Map", icon: MapPin },
@@ -28,6 +30,7 @@ const Index = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { nodes, selfNodeId } = useNodesContext();
+  const { status: deviceStatus } = useMeshtasticConnectionStatus();
 
   // Check if COM port is selected, redirect to init screen if not
   useEffect(() => {
@@ -57,14 +60,26 @@ const Index = () => {
     }
   }, [nodes, selfNodeId, selectedNodeId]);
 
-  return (
-    <MessagesProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-background">
-        {/* Persistent SDN Node Sidebar */}
-        <NodeDetailsSidebar selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+  const isDeviceConnected = deviceStatus?.connected ?? true;
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+  return (
+    <>
+      {/* Device Disconnection Overlay - rendered at top level */}
+      {!isDeviceConnected && deviceStatus && (
+        <DeviceDisconnectionOverlay
+          message={deviceStatus.message}
+          port={deviceStatus.port}
+          onRetry={() => navigate('/')}
+        />
+      )}
+
+      <MessagesProvider>
+        <div className={`flex h-screen w-full overflow-hidden bg-background ${!isDeviceConnected ? 'pointer-events-none opacity-50' : ''}`}>
+          {/* Persistent SDN Node Sidebar */}
+          <NodeDetailsSidebar selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
         <DashboardHeader />
 
         <Tabs defaultValue="offline-map" className="flex-1 flex flex-col overflow-hidden">
@@ -110,6 +125,7 @@ const Index = () => {
       </div>
     </div>
     </MessagesProvider>
+    </>
   );
 };
 
