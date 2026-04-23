@@ -1,6 +1,10 @@
+import base64
+
 import meshtastic
 import meshtastic.serial_interface
 from pubsub import pub
+from app.core.database import SessionLocal
+from app.models.node import Node
 from app.services.db_update_service import set_last_heard_now, update_nodes_db,update_message_db, get_messages_by_req_id_and_source
 import asyncio
 import os
@@ -10,6 +14,23 @@ from datetime import datetime
 from app.services.sdn_packet_handler import handle_SDN_route_update
 # Protobuf imports for SDN and AODV packet parsing
 from app.generated import sdn_pb2, aodv_pb2, portnums_pb2
+
+# Try to import AdminMessage from meshtastic for admin packet handling
+try:
+    from meshtastic import admin_pb2
+    HAS_ADMIN_PROTO = True
+except ImportError:
+    HAS_ADMIN_PROTO = False
+
+
+def _extract_payload_bytes(decoded):
+    payload = decoded.get("payload")
+    if payload is None:
+        return b""
+    if isinstance(payload, str):
+        return base64.b64decode(payload)
+    return bytes(payload)
+
 
 def publish_text_to_websocket(app, message:dict):
     """Utility function to publish text message updates to the frontend via WebSocket"""
@@ -22,6 +43,60 @@ def publish_node_update_to_websocket(app, node_info:dict):
     broadcaster = app.state.node_update_broadcaster  # Use separate broadcaster for node updates
     broadcaster.publish(node_info)
     print(f"Published node update to WebSocket: {node_info}")
+
+
+def refresh_nodes_db_and_publish(interface):
+    """Sync iface.nodes into the DB and publish only changed node records."""
+    changed_nodes = update_nodes_db(interface)
+    if len(changed_nodes) > 0 and getattr(interface, "app", None):
+        for node in changed_nodes:
+            publish_node_update_to_websocket(interface.app, node)
+
+
+def update_node_owner_from_admin(node_id, long_name):
+    """Update one node's owner name from an admin get_owner_response."""
+    db = SessionLocal()
+    try:
+        if isinstance(node_id, bytes):
+            node_id_bytes = node_id
+        elif isinstance(node_id, int):
+            node_id_bytes = node_id.to_bytes(4, byteorder="big", signed=False)
+        else:
+            return None
+
+        node = db.query(Node).filter(Node.id == node_id_bytes).first()
+        if node:
+            node.long_name = long_name
+            node.last_heard = int(time.time())
+            if node.status != "online":
+                node.status = "online"
+        else:
+            node = Node(
+                id=node_id_bytes,
+                long_name=long_name,
+                last_heard=int(time.time()),
+                status="online",
+            )
+            db.add(node)
+
+        db.commit()
+        return {
+            "id": node.id.hex(),
+            "long_name": node.long_name,
+            "hw_model": node.hw_model,
+            "snr": node.snr,
+            "battery_level": node.battery_level,
+            "status": node.status,
+            "hops_away": node.hops_away,
+            "gps_coordinates": node.gps_coordinates,
+            "role": node.role,
+        }
+    except Exception as e:
+        db.rollback()
+        print(f"Error updating node owner from admin response: {e}")
+        return None
+    finally:
+        db.close()
 
 def _set_connection_status(app, *, connected: bool, status: str, message: str, interface=None):
     """Update the Meshtastic connection status in app state"""
@@ -82,7 +157,7 @@ def on_receive(packet, interface):
     # SDN packets
     if portnum_val == portnums_pb2.PortNum.SDN_APP:
         print(f"🌐 SDN PACKET:")
-        payload = decoded.get('payload', b'')
+        payload = _extract_payload_bytes(decoded)
         try:
             sdn_msg = sdn_pb2.SDN()
             sdn_msg.ParseFromString(payload)
@@ -176,7 +251,7 @@ def on_receive(packet, interface):
     # AODV packets
     elif portnum_val == portnums_pb2.PortNum.AODV_ROUTING_APP:
         print(f"🗺️  AODV PACKET:")
-        payload = decoded.get('payload', b'')
+        payload = _extract_payload_bytes(decoded)
         try:
             aodv_msg = aodv_pb2.AODV()
             aodv_msg.ParseFromString(payload)
@@ -194,6 +269,106 @@ def on_receive(packet, interface):
                 print(f"  AODV Raw: {aodv_msg}")
         except Exception as e:
             print(f"  (AODV Parse error: {e})")
+            print(f"  Raw payload length: {len(payload)} bytes")
+    
+    # Admin messages (request/response packets)
+    elif portnum_val == portnums_pb2.PortNum.ADMIN_APP and HAS_ADMIN_PROTO:
+        print(f"⚙️  ADMIN MESSAGE:")
+        payload = _extract_payload_bytes(decoded)
+        from_node = hex(packet.get('from'))
+        to_node = hex(packet.get('to'))
+        
+        print(f"  From: {from_node}")
+        print(f"  To: {to_node}")
+        print(f"  Payload Size: {len(payload)} bytes")
+        print(f"  Payload (hex): {payload.hex()}")
+        
+        try:
+            admin_msg = admin_pb2.AdminMessage()
+            admin_msg.ParseFromString(payload)
+            
+            # Debug: show all set fields in the admin message
+            print(f"  [DEBUG] AdminMessage set fields: {[f.name for f, v in admin_msg.ListFields()]}")
+            
+            # Identify which field is set in the AdminMessage
+            if admin_msg.HasField("get_owner_request"):
+                print(f"  Type: Get Owner Request")
+                print(f"  Value: {admin_msg.get_owner_request}")
+            elif admin_msg.HasField("get_owner_response"):
+                print(f"  Type: Get Owner Response")
+                response = admin_msg.get_owner_response
+                print(f"    long_name: '{response.long_name}'")
+                print(f"    short_name: '{response.short_name}'")
+                print(f"    is_licensed: {response.is_licensed}")
+                updated_node = update_node_owner_from_admin(packet.get("from"), response.long_name)
+                if updated_node and getattr(interface, "app", None):
+                    publish_node_update_to_websocket(interface.app, updated_node)
+                
+                # Debug: Print all available fields in response
+                print(f"    [DEBUG] Response object type: {type(response)}")
+                print(f"    [DEBUG] Response fields: {response.ListFields()}")
+                print(f"    [DEBUG] Response descriptor: {response.DESCRIPTOR}")
+                if hasattr(response, 'DESCRIPTOR'):
+                    print(f"    [DEBUG] Available fields in schema:")
+                    for field in response.DESCRIPTOR.fields_by_name:
+                        field_value = getattr(response, field, None)
+                        print(f"      - {field}: {field_value} (type: {type(field_value).__name__})")
+                
+                # Extract and cache the session_passkey from the AdminMessage
+                # Per firmware protocol: session_passkey is directly on AdminMessage, not nested in get_owner_response
+                from_node = packet.get("from")
+                try:
+                    # session_passkey field is directly on the AdminMessage
+                    session_key = bytes(admin_msg.session_passkey)
+                    passkey_size = len(session_key)
+                    if passkey_size == 8:
+                        
+                        print(f"    ✅ [SESSION] Found session_passkey: {session_key.hex()} (len={passkey_size})")
+                        
+                        # Cache the passkey bytes
+                        from app.services.admin_service import SESSION_KEY_CACHE
+                        SESSION_KEY_CACHE[from_node] = (session_key, time.time())
+                        print(f"    ✅ [CACHE] Session passkey cached for node {hex(from_node)}")
+                    else:
+                        print(f"    ⚠️  [SESSION] No session_passkey field in AdminMessage")
+                        print(f"    [DEBUG] AdminMessage fields: {[field.name for field, _ in admin_msg.ListFields()]}")
+                except Exception as e:
+                    import traceback
+                    print(f"    ⚠️  [CACHE] Error extracting session passkey: {e}")
+                    traceback.print_exc()
+                        
+                        
+            elif admin_msg.HasField("set_owner"):
+                print(f"  Type: Set Owner Response")
+                owner = admin_msg.set_owner
+                print(f"    long_name: '{owner.long_name}'")
+                print(f"    short_name: '{owner.short_name}'")
+                print(f"    is_licensed: {owner.is_licensed}")
+            elif admin_msg.HasField("get_config_request"):
+                print(f"  Type: Get Config Request")
+                print(f"  Config Type: {admin_msg.get_config_request}")
+            elif admin_msg.HasField("get_channel_request"):
+                print(f"  Type: Get Channel Request")
+                print(f"  Channel Num: {admin_msg.get_channel_request}")
+            elif admin_msg.HasField("reboot_seconds"):
+                print(f"  Type: Reboot Request")
+                print(f"  Delay Seconds: {admin_msg.reboot_seconds}")
+            elif admin_msg.HasField("shutdown_seconds"):
+                print(f"  Type: Shutdown Request")
+                print(f"  Delay Seconds: {admin_msg.shutdown_seconds}")
+            else:
+                print(f"  Type: Unknown Admin Message (not a known field)")
+                print(f"  [DEBUG] Message type check:")
+                print(f"    - HasField('get_owner_response'): {admin_msg.HasField('get_owner_response') if hasattr(admin_msg, 'HasField') else 'N/A'}")
+                print(f"  [DEBUG] All set fields:")
+                for field, value in admin_msg.ListFields():
+                    print(f"    - {field.name}: {value}")
+                print(f"  [DEBUG] Full message: {admin_msg}")
+                
+        except Exception as e:
+            import traceback
+            print(f"  (Admin Parse error: {e})")
+            traceback.print_exc()
             print(f"  Raw payload length: {len(payload)} bytes")
     
     elif decoded.get("portnum") == "TEXT_MESSAGE_APP":
@@ -251,10 +426,6 @@ def on_receive(packet, interface):
     
     elif decoded.get("portnum") == "TELEMETRY_APP":
         print(f"Received telemetry packet: {decoded}")
-        changed_nodes = update_nodes_db(interface)
-        if (len(changed_nodes) > 0):
-            for node in changed_nodes:
-                publish_node_update_to_websocket(interface.app, node)
             
 
     elif decoded.get("portnum") == "ROUTING_APP":
@@ -296,6 +467,9 @@ def on_receive(packet, interface):
             "ack_status": message.ack_status,
             "ack_timestamp": message.ack_timestamp.timestamp() if message.ack_timestamp else None
         }) 
+
+    if getattr(interface, "nodes", None):
+        refresh_nodes_db_and_publish(interface)
 
 
 def get_meshtastic_port():
