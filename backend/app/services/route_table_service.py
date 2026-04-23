@@ -101,4 +101,3 @@ def get_route_table_serial(
             pub.unsubscribe(on_receive, "meshtastic.receive")
         except Exception:
             pass
-        iface.close()

@@ -57,26 +57,23 @@ def send_route_install_serial(
     payload = sdn_msg.SerializeToString()
 
     iface = app.state.meshtastic_interface
-    try:
-        time.sleep(0.4)
-        iface.sendData(
-            data=payload,
-            destinationId=f"!{start_node_id:08x}",
-            portNum=portnums_pb2.PortNum.SDN_APP,
-            wantAck=want_ack,
-            channelIndex=channel_index,
-        )
-        return {
-            "start_node": format_hex_node_id(start_node_id),
-            "destination": format_hex_node_id(destination_id),
-            "install_id": route_install.install_id,
-            "path": [format_hex_node_id(parse_hex_node_id(hop, field_name="path", max_value=0xFF), width=2) for hop in path],
-            "hop_path": route_install.hop_path,
-            "channel_index": channel_index,
-            "want_ack": want_ack,
-        }
-    finally:
-        iface.close()
+    time.sleep(0.4)
+    iface.sendData(
+        data=payload,
+        destinationId=f"!{start_node_id:08x}",
+        portNum=portnums_pb2.PortNum.SDN_APP,
+        wantAck=want_ack,
+        channelIndex=channel_index,
+    )
+    return {
+        "start_node": format_hex_node_id(start_node_id),
+        "destination": format_hex_node_id(destination_id),
+        "install_id": route_install.install_id,
+        "path": [format_hex_node_id(parse_hex_node_id(hop, field_name="path", max_value=0xFF), width=2) for hop in path],
+        "hop_path": route_install.hop_path,
+        "channel_index": channel_index,
+        "want_ack": want_ack,
+    }
 
 
 def send_route_switch_serial(
@@ -100,21 +97,18 @@ def send_route_switch_serial(
     payload = sdn_msg.SerializeToString()
 
     iface = app.state.meshtastic_interface
-    try:
-        time.sleep(0.4)
-        iface.sendData(
-            data=payload,
-            destinationId=f"!{target_node_id:08x}",
-            portNum=portnums_pb2.PortNum.SDN_APP,
-            wantAck=want_ack,
-            channelIndex=channel_index,
-        )
-        return {
-            "target_node": format_hex_node_id(target_node_id),
-            "destination": format_hex_node_id(destination_id),
-            "next_hop": format_hex_node_id(next_hop_id, width=2),
-            "channel_index": channel_index,
-            "want_ack": want_ack,
-        }
-    finally:
-        iface.close()
+    time.sleep(0.4)
+    iface.sendData(
+        data=payload,
+        destinationId=f"!{target_node_id:08x}",
+        portNum=portnums_pb2.PortNum.SDN_APP,
+        wantAck=want_ack,
+        channelIndex=channel_index,
+    )
+    return {
+        "target_node": format_hex_node_id(target_node_id),
+        "destination": format_hex_node_id(destination_id),
+        "next_hop": format_hex_node_id(next_hop_id, width=2),
+        "channel_index": channel_index,
+        "want_ack": want_ack,
+    }
