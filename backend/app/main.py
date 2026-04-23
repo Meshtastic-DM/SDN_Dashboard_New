@@ -20,6 +20,7 @@ from app.services.meshtastic_service import (
 
 from app.routers.sdn_serial import router as sdn_serial_router
 from app.routers.route_table import router as route_table_router
+from app.routers.admin import router as admin_router
 
 from app.services.broadcaster import Broadcaster
 from app.serial.worker import SerialWorker
@@ -58,6 +59,7 @@ app.include_router(link_quality.router)
 
 app.include_router(sdn_serial_router)
 app.include_router(route_table_router)
+app.include_router(admin_router)
 
 @app.on_event("startup")
 async def startup_event():
