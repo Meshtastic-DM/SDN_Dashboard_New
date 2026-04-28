@@ -347,6 +347,32 @@ def on_receive(packet, interface):
             elif admin_msg.HasField("get_config_request"):
                 print(f"  Type: Get Config Request")
                 print(f"  Config Type: {admin_msg.get_config_request}")
+            elif admin_msg.HasField("get_config_response"):
+                print("  Type: Get Config Response")
+                try:
+                    session_key = bytes(admin_msg.session_passkey)
+                    if len(session_key) == 8:
+                        from app.services.admin_service import SESSION_KEY_CACHE
+
+                        SESSION_KEY_CACHE[packet.get("from")] = (session_key, time.time())
+                        print(f"    ✅ [CACHE] Session passkey cached for node {hex(packet.get('from'))}")
+                except Exception as cache_error:
+                    print(f"    ⚠️  [CACHE] Could not cache config response passkey: {cache_error}")
+
+                config_response = admin_msg.get_config_response
+                if config_response.HasField("lora"):
+                    lora = config_response.lora
+                    print("    Config Variant: lora")
+                    print(f"    region: {getattr(lora, 'region', None)}")
+                    print(f"    modem_preset: {getattr(lora, 'modem_preset', None)}")
+                    print(f"    bandwidth: {getattr(lora, 'bandwidth', None)}")
+                    print(f"    spread_factor: {getattr(lora, 'spread_factor', None)}")
+                    print(f"    coding_rate: {getattr(lora, 'coding_rate', None)}")
+                    print(f"    tx_power: {getattr(lora, 'tx_power', None)}")
+                    print(f"    tx_enabled: {getattr(lora, 'tx_enabled', None)}")
+                else:
+                    print("    Config Variant: non-lora/unknown")
+                    print(f"    Raw Config: {config_response}")
             elif admin_msg.HasField("get_channel_request"):
                 print(f"  Type: Get Channel Request")
                 print(f"  Channel Num: {admin_msg.get_channel_request}")
