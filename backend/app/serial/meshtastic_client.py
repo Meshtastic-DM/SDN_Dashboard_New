@@ -44,6 +44,13 @@ def publish_node_update_to_websocket(app, node_info:dict):
     broadcaster.publish(node_info)
     print(f"Published node update to WebSocket: {node_info}")
 
+def publish_connection_status_to_websocket(app, status:dict):
+    """Utility function to publish Meshtastic connection status updates."""
+    broadcaster = getattr(app.state, "meshtastic_status_broadcaster", None)
+    if broadcaster:
+        broadcaster.publish(status)
+    print(f"Published Meshtastic connection status to WebSocket: {status}")
+
 
 def refresh_nodes_db_and_publish(interface):
     """Sync iface.nodes into the DB and publish only changed node records."""
@@ -113,6 +120,8 @@ def _set_connection_status(app, *, connected: bool, status: str, message: str, i
         app.state.meshtastic_interface = interface
     elif not connected:
         app.state.meshtastic_interface = None
+
+    publish_connection_status_to_websocket(app, app.state.meshtastic_status)
 
 def _handle_connection_event(interface=None, topic=pub.AUTO_TOPIC):
     """Handle Meshtastic connection and disconnection events"""
