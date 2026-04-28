@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { subscribeAdminActivity } from '@/hooks/adminActivity';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -13,6 +14,7 @@ export interface MeshtasticConnectionStatus {
 export function useMeshtasticConnectionStatus(pollIntervalMs = 3000) {
   const [status, setStatus] = useState<MeshtasticConnectionStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adminPollingPaused, setAdminPollingPaused] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -43,11 +45,21 @@ export function useMeshtasticConnectionStatus(pollIntervalMs = 3000) {
   }, []);
 
   useEffect(() => {
-    fetchStatus();
+    if (adminPollingPaused) {
+      return;
+    }
 
     const timer = window.setInterval(fetchStatus, pollIntervalMs);
     return () => window.clearInterval(timer);
-  }, [fetchStatus, pollIntervalMs]);
+  }, [adminPollingPaused, fetchStatus, pollIntervalMs]);
+
+  useEffect(() => subscribeAdminActivity(setAdminPollingPaused), []);
+
+  useEffect(() => {
+    if (!adminPollingPaused) {
+      fetchStatus();
+    }
+  }, [adminPollingPaused, fetchStatus]);
 
   return {
     status,
