@@ -11,6 +11,7 @@ import MessagesView from "@/components/dashboard/MessagesView";
 import RouteAnalysis from "@/components/dashboard/RouteAnalysis";
 import OfflineMapView from "@/components/dashboard/OfflineMapView";
 import NetworkQuality from "@/components/dashboard/NetworkQuality";
+import AdminModal from "@/components/dashboard/AdminModal";
 import { useNodesContext } from "@/contexts/NodesContext";
 import { MessagesProvider } from "@/contexts/MessagesContext";
 import { useMeshtasticConnectionStatus } from "@/hooks/useMeshtasticConnection";
@@ -28,9 +29,12 @@ const tabs = [
 
 const Index = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
   const navigate = useNavigate();
   const { nodes, selfNodeId } = useNodesContext();
   const { status: deviceStatus } = useMeshtasticConnectionStatus();
+
+  const selectedNode = nodes.find(n => n.id === selectedNodeId) || null;
 
   // Check if COM port is selected, redirect to init screen if not
   useEffect(() => {
@@ -109,7 +113,7 @@ const Index = () => {
               <TopologyView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
             </TabsContent>
             <TabsContent value="nodes" className="h-full m-0">
-              <ExtendedNodeView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+              <ExtendedNodeView selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} onAdminClick={() => setAdminModalOpen(true)} />
             </TabsContent>
             <TabsContent value="messages" className="h-full m-0">
               <MessagesView />
@@ -124,6 +128,9 @@ const Index = () => {
         </Tabs>
       </div>
     </div>
+    
+    {/* Admin Modal */}
+    <AdminModal isOpen={adminModalOpen} onOpenChange={setAdminModalOpen} selectedNode={selectedNode} />
     </MessagesProvider>
     </>
   );
