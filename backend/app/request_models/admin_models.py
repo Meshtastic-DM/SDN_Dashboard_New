@@ -132,6 +132,36 @@ class GetConfigRequest(BaseModel):
     want_ack: bool = True
 
 
+class LoRaConfigUpdate(BaseModel):
+    region: Optional[int] = None
+    modem_preset: Optional[int] = None
+    tx_power: Optional[int] = None
+    channel_num: Optional[int] = None
+    bandwidth: Optional[int] = None
+    spread_factor: Optional[int] = None
+    coding_rate: Optional[int] = None
+    frequency_offset: Optional[float] = None
+    override_frequency: Optional[float] = None
+    tx_enabled: Optional[bool] = None
+    ignore_mqtt: Optional[bool] = None
+
+
+class GetLoRaConfigRequest(BaseModel):
+    target_node: str | int = Field(..., description="Target node ID as hex")
+    channel_index: int = Field(0, ge=0)
+    want_ack: bool = True
+    timeout_s: float = Field(10.0, gt=0)
+
+
+class SetLoRaConfigRequest(BaseModel):
+    target_node: str | int = Field(..., description="Target node ID as hex")
+    lora_config: LoRaConfigUpdate
+    channel_index: int = Field(0, ge=0)
+    want_ack: bool = True
+    verify_after_set: bool = True
+    timeout_s: float = Field(10.0, gt=0)
+
+
 class GetChannelRequest(BaseModel):
     target_node: str | int = Field(..., description="Target node ID as hex")
     channel_index: int = Field(..., ge=0, le=7, description="Channel index to retrieve")
