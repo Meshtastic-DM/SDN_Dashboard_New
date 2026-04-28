@@ -17,6 +17,8 @@ from app.request_models.admin_models import (
     SetHamModeRequest,
     GetOwnerRequest,
     GetConfigRequest,
+    GetLoRaConfigRequest,
+    SetLoRaConfigRequest,
     GetChannelRequest,
     GetDeviceMetadataRequest,
     GetDeviceConnectionStatusRequest,
@@ -38,6 +40,8 @@ from app.services.admin_service import (
     send_set_ham_mode,
     send_get_owner,
     send_get_config,
+    get_lora_config,
+    set_lora_config,
     send_get_channel,
     send_get_device_metadata,
     send_get_device_connection_status,
@@ -489,6 +493,46 @@ async def get_config(req: GetConfigRequest, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/config/lora/get", response_model=AdminMessageResponse)
+async def get_lora_config_endpoint(req: GetLoRaConfigRequest, request: Request):
+    """Get LoRa configuration from a remote node and wait for the response."""
+    try:
+        details = await run_in_threadpool(
+            get_lora_config,
+            request.app,
+            req.target_node,
+            req.channel_index,
+            req.want_ack,
+            req.timeout_s,
+        )
+        return AdminMessageResponse(status="ok", details=details)
+    except TimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/config/lora/set", response_model=AdminMessageResponse)
+async def set_lora_config_endpoint(req: SetLoRaConfigRequest, request: Request):
+    """Update LoRa configuration on a remote node using the get-then-set admin flow."""
+    try:
+        details = await run_in_threadpool(
+            set_lora_config,
+            request.app,
+            req.target_node,
+            req.lora_config.model_dump(exclude_none=True),
+            req.channel_index,
+            req.want_ack,
+            req.verify_after_set,
+            req.timeout_s,
+        )
+        return AdminMessageResponse(status="ok", details=details)
+    except TimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/channel/get", response_model=AdminMessageResponse)
 async def get_channel(req: GetChannelRequest, request: Request):
     """
@@ -623,6 +667,8 @@ async def get_operations():
         ],
         "configuration": [
             "POST /api/admin/config/get - Get config section",
+            "POST /api/admin/config/lora/get - Get LoRa config with parsed response",
+            "POST /api/admin/config/lora/set - Set LoRa config with verification",
             "POST /api/admin/channel/get - Get channel config",
             "POST /api/admin/metadata/get - Get device metadata",
             "POST /api/admin/connection-status/get - Get connection status",
