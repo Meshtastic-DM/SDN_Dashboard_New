@@ -1,7 +1,9 @@
+import base64
+import queue
 import sys
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 
 # Add local protobuf module paths
 PROTO_DIR = Path(__file__).resolve().parents[1] / "generated"
@@ -10,13 +12,16 @@ sys.path.insert(0, str(PROTO_DIR))
 import app.generated.portnums_pb2 as portnums_pb2
 
 from app.services.node_id_utils import format_hex_node_id, parse_hex_node_id
+from pubsub import pub
 
 # Try to import AdminMessage from meshtastic or create a fallback
 try:
     from meshtastic import admin_pb2
+    from meshtastic.protobuf import config_pb2
     HAS_ADMIN_PROTO = True
 except ImportError:
     HAS_ADMIN_PROTO = False
+    config_pb2 = None
 
 # Session key cache: {node_id: (session_key_bytes, timestamp)}
 # Session keys are valid for ~300 seconds
@@ -24,6 +29,29 @@ SESSION_KEY_CACHE: Dict[int, tuple] = {}
 SESSION_KEY_TIMEOUT = 300  # seconds
 SESSION_KEY_RESPONSE_TIMEOUT = 10.0  # seconds
 SESSION_KEY_FETCH_ATTEMPTS = 3
+
+
+def _cache_session_passkey(
+    target_node_id: int,
+    session_passkey: Any,
+    *,
+    source: str,
+) -> Optional[bytes]:
+    """Cache and return an 8-byte session passkey, if present."""
+    passkey = bytes(session_passkey or b"")
+    if len(passkey) == 8:
+        SESSION_KEY_CACHE[target_node_id] = (passkey, time.time())
+        print(
+            f"   [SESSION] Cached session_passkey from {source} "
+            f"for {format_hex_node_id(target_node_id)}"
+        )
+        return passkey
+    if passkey:
+        print(
+            f"   [SESSION] Ignoring invalid session_passkey from {source}: "
+            f"expected 8 bytes, got {len(passkey)}"
+        )
+    return None
 
 
 def _coerce_session_passkey(session_passkey: Any) -> bytes:
@@ -34,7 +62,7 @@ def _coerce_session_passkey(session_passkey: Any) -> bytes:
     return passkey
 
 
-def get_or_refresh_session_key(
+def _legacy_get_or_refresh_session_key(
     app,
     target_node: str | int,
     force_refresh: bool = False,
@@ -226,6 +254,162 @@ def send_admin_message(
     }
 
 
+def _extract_admin_payload(packet: Dict[str, Any]) -> bytes:
+    decoded = packet.get("decoded", {})
+    payload = decoded.get("payload")
+    if payload is None:
+        return b""
+    if isinstance(payload, str):
+        return base64.b64decode(payload)
+    return bytes(payload)
+
+
+def _is_admin_port(packet: Dict[str, Any]) -> bool:
+    decoded = packet.get("decoded", {})
+    portnum = decoded.get("portnum")
+    return portnum in (portnums_pb2.PortNum.ADMIN_APP, "ADMIN_APP", 6)
+
+
+def _enum_lora_config_type() -> int:
+    if hasattr(admin_pb2.AdminMessage, "LORA_CONFIG"):
+        return admin_pb2.AdminMessage.LORA_CONFIG
+    return admin_pb2.AdminMessage.ConfigType.LORA_CONFIG
+
+
+def _wait_for_admin_response(
+    iface,
+    target_node_id: int,
+    expected_variant: str,
+    timeout_s: float,
+    dispatch: Optional[Callable[[], None]] = None,
+):
+    admin_rx_q: queue.Queue[admin_pb2.AdminMessage] = queue.Queue()
+
+    def _on_receive(packet: Dict[str, Any], interface: Any) -> None:
+        if interface is not iface or not _is_admin_port(packet):
+            return
+        if packet.get("from") != target_node_id:
+            return
+
+        payload = _extract_admin_payload(packet)
+        if not payload:
+            return
+
+        try:
+            msg = admin_pb2.AdminMessage()
+            msg.ParseFromString(payload)
+            variant = None
+            try:
+                variant = msg.WhichOneof("payload_variant")
+            except Exception:
+                variant = None
+
+            has_expected_field = False
+            try:
+                has_expected_field = msg.HasField(expected_variant)
+            except Exception:
+                has_expected_field = False
+
+            if variant == expected_variant or has_expected_field:
+                admin_rx_q.put(msg)
+        except Exception as parse_error:
+            print(f"   [ADMIN] Ignoring unparsable admin response: {parse_error}")
+
+    pub.subscribe(_on_receive, "meshtastic.receive")
+    try:
+        if dispatch is not None:
+            dispatch()
+        return admin_rx_q.get(timeout=timeout_s)
+    except queue.Empty as exc:
+        raise TimeoutError(
+            f"Timed out waiting for admin response '{expected_variant}' from {format_hex_node_id(target_node_id)}"
+        ) from exc
+    finally:
+        try:
+            pub.unsubscribe(_on_receive, "meshtastic.receive")
+        except Exception:
+            pass
+
+
+def _lora_config_to_dict(lora_config: Any) -> Dict[str, Any]:
+    return {
+        "region": getattr(lora_config, "region", None),
+        "modem_preset": getattr(lora_config, "modem_preset", None),
+        "tx_power": getattr(lora_config, "tx_power", None),
+        "channel_num": getattr(lora_config, "channel_num", None),
+        "bandwidth": getattr(lora_config, "bandwidth", None),
+        "spread_factor": getattr(lora_config, "spread_factor", None),
+        "coding_rate": getattr(lora_config, "coding_rate", None),
+        "frequency_offset": getattr(lora_config, "frequency_offset", None),
+        "override_frequency": getattr(lora_config, "override_frequency", None),
+        "tx_enabled": getattr(lora_config, "tx_enabled", None),
+        "ignore_mqtt": getattr(lora_config, "ignore_mqtt", None),
+    }
+
+
+def get_or_refresh_session_key(
+    app,
+    target_node: str | int,
+    force_refresh: bool = False,
+    channel_index: int = 0,
+) -> bytes:
+    """Return a cached session key, or fetch one with a GET_OWNER request."""
+    target_node_id = parse_hex_node_id(target_node, field_name="target_node")
+    current_time = time.time()
+
+    if force_refresh and target_node_id in SESSION_KEY_CACHE:
+        del SESSION_KEY_CACHE[target_node_id]
+        print(f"   [SESSION] Forced refresh: cleared cached key for {format_hex_node_id(target_node_id)}")
+
+    if target_node_id in SESSION_KEY_CACHE:
+        cached_key, cached_time = SESSION_KEY_CACHE[target_node_id]
+        if current_time - cached_time < SESSION_KEY_TIMEOUT:
+            print(f"   [SESSION] Using cached session key (age: {current_time - cached_time:.1f}s)")
+            return _coerce_session_passkey(cached_key)
+        print(f"   [SESSION] Cached session key expired (age: {current_time - cached_time:.1f}s)")
+
+    if not HAS_ADMIN_PROTO:
+        raise RuntimeError("AdminMessage protobuf not available")
+
+    iface = app.state.meshtastic_interface
+    if not iface:
+        raise RuntimeError("Meshtastic interface not available")
+
+    msg = admin_pb2.AdminMessage()
+    msg.get_owner_request = True
+    payload = msg.SerializeToString()
+
+    print(f"   [SESSION] Fetching fresh session key from {format_hex_node_id(target_node_id)}...")
+    try:
+        response = _wait_for_admin_response(
+            iface,
+            target_node_id,
+            "get_owner_response",
+            SESSION_KEY_RESPONSE_TIMEOUT,
+            dispatch=lambda: send_admin_message(
+                app,
+                target_node_id,
+                payload,
+                channel_index,
+                True,
+                True,
+            ),
+        )
+    except Exception as exc:
+        print(f"   [SESSION] Failed to obtain session key: {exc}")
+        raise
+
+    session_key = _cache_session_passkey(
+        target_node_id,
+        response.session_passkey,
+        source="get_owner_response",
+    )
+    if session_key:
+        return session_key
+
+    raise RuntimeError("get_owner_response did not include a valid 8-byte session_passkey")
+
+
 def get_or_refresh_session_key_with_retry(
     app,
     target_node: str | int,
@@ -399,11 +583,11 @@ def send_reboot(
     print(f"   🔐 [AUTH] Obtaining session key...")
     session_passkey = None
     try:
-        # Force fresh key fetch before SET operation (GET first, then SET)
+        # Reuse a valid key from a recent admin/config response when available.
         session_passkey = get_or_refresh_session_key_with_retry(
             app,
             target_node_id,
-            force_refresh=True,
+            force_refresh=False,
             channel_index=channel_index,
         )
     except Exception as e:
@@ -457,11 +641,11 @@ def send_shutdown(
     print(f"   🔐 [AUTH] Obtaining session key...")
     session_passkey = None
     try:
-        # Force fresh key fetch before SET operation (GET first, then SET)
+        # Reuse a valid key from a recent admin/config response when available.
         session_passkey = get_or_refresh_session_key_with_retry(
             app,
             target_node_id,
-            force_refresh=True,
+            force_refresh=False,
             channel_index=channel_index,
         )
     except Exception as e:
@@ -810,6 +994,210 @@ def send_get_config(
         "operation": "get_config",
         "config_type": config_type,
     })
+    return result
+
+
+def get_lora_config(
+    app,
+    target_node: str | int,
+    channel_index: int = 0,
+    want_ack: bool = True,
+    timeout_s: float = 10.0,
+) -> Dict[str, Any]:
+    """Fetch LoRa config and wait for the matching admin response."""
+    if not HAS_ADMIN_PROTO or config_pb2 is None:
+        raise RuntimeError("Admin/config protobufs not available")
+
+    target_node_id = parse_hex_node_id(target_node, field_name="target_node")
+    target_hex = format_hex_node_id(target_node_id)
+    iface = app.state.meshtastic_interface
+    if not iface:
+        raise RuntimeError("Meshtastic interface not available")
+
+    print(f"📡 [GET_LORA_CONFIG] Target: {target_hex}")
+    result: Dict[str, Any] = {}
+
+    local_node_id = None
+    if getattr(iface, "myInfo", None):
+        local_node_id = getattr(iface.myInfo, "my_node_num", None)
+    is_local_target = local_node_id == target_node_id if local_node_id is not None else False
+
+    def _request_once(wait_timeout_s: float):
+        msg = admin_pb2.AdminMessage()
+        msg.get_config_request = _enum_lora_config_type()
+        payload = msg.SerializeToString()
+
+        def _dispatch() -> None:
+            result.update(
+                send_admin_message(app, target_node_id, payload, channel_index, want_ack, True)
+            )
+
+        return _wait_for_admin_response(
+            iface,
+            target_node_id,
+            "get_config_response",
+            wait_timeout_s,
+            dispatch=_dispatch,
+        )
+
+    response = None
+    first_error: Optional[Exception] = None
+    try:
+        response = _request_once(timeout_s)
+    except Exception as exc:
+        first_error = exc
+
+    # Remote mesh requests can miss the first attempt while route discovery settles.
+    if response is None and isinstance(first_error, TimeoutError) and not is_local_target:
+        print("   [GET_LORA_CONFIG] First attempt timed out, retrying get_config with longer timeout...")
+        try:
+            response = _request_once(max(timeout_s, 20.0))
+            result["retried_after_timeout"] = True
+        except Exception:
+            if first_error is not None:
+                raise first_error
+            raise
+
+    if response is None:
+        if first_error is not None:
+            raise first_error
+        raise RuntimeError(
+            f"Failed to fetch LoRa config from {target_hex}: no get_config_response received"
+        )
+
+    if not response.get_config_response.HasField("lora"):
+        raise RuntimeError("Received get_config_response, but it did not contain a LoRa config payload")
+
+    response_passkey = bytes(response.session_passkey or b"")
+    _cache_session_passkey(target_node_id, response_passkey, source="get_config_response")
+
+    lora_config = response.get_config_response.lora
+    result.update({
+        "operation": "get_lora_config",
+        "config_type": _enum_lora_config_type(),
+        "session_passkey_len": len(response_passkey),
+        "config": _lora_config_to_dict(lora_config),
+    })
+    return result
+
+
+def set_lora_config(
+    app,
+    target_node: str | int,
+    lora_update: Dict[str, Any],
+    channel_index: int = 0,
+    want_ack: bool = True,
+    verify_after_set: bool = True,
+    timeout_s: float = 10.0,
+) -> Dict[str, Any]:
+    """Update LoRa config using the firmware-required get_config -> set_config flow."""
+    if not HAS_ADMIN_PROTO or config_pb2 is None:
+        raise RuntimeError("Admin/config protobufs not available")
+
+    target_node_id = parse_hex_node_id(target_node, field_name="target_node")
+    target_hex = format_hex_node_id(target_node_id)
+    iface = app.state.meshtastic_interface
+    if not iface:
+        raise RuntimeError("Meshtastic interface not available")
+
+    if not lora_update:
+        raise RuntimeError("No LoRa config fields were provided to update")
+
+    local_node_id = None
+    if getattr(iface, "myInfo", None):
+        local_node_id = getattr(iface.myInfo, "my_node_num", None)
+    is_local_target = local_node_id == target_node_id if local_node_id is not None else False
+
+    get_msg = admin_pb2.AdminMessage()
+    get_msg.get_config_request = _enum_lora_config_type()
+    try:
+        current_response = _wait_for_admin_response(
+            iface,
+            target_node_id,
+            "get_config_response",
+            timeout_s,
+            dispatch=lambda: send_admin_message(
+                app,
+                target_node_id,
+                get_msg.SerializeToString(),
+                channel_index,
+                want_ack,
+                True,
+            ),
+        )
+    except TimeoutError:
+        if is_local_target:
+            raise
+        print("   [SET_LORA_CONFIG] Initial get_config timed out, retrying with longer timeout...")
+        current_response = _wait_for_admin_response(
+            iface,
+            target_node_id,
+            "get_config_response",
+            max(timeout_s, 20.0),
+            dispatch=lambda: send_admin_message(
+                app,
+                target_node_id,
+                get_msg.SerializeToString(),
+                channel_index,
+                want_ack,
+                True,
+            ),
+        )
+    if not current_response.get_config_response.HasField("lora"):
+        raise RuntimeError("Received get_config_response, but it did not contain a LoRa config payload")
+
+    response_passkey = bytes(current_response.session_passkey or b"")
+    cached_response_key = _cache_session_passkey(
+        target_node_id,
+        response_passkey,
+        source="get_config_response",
+    )
+    if cached_response_key:
+        session_passkey = cached_response_key
+    else:
+        session_passkey = get_or_refresh_session_key_with_retry(
+            app,
+            target_node_id,
+            force_refresh=True,
+            channel_index=channel_index,
+        )
+    current_config = config_pb2.Config()
+    current_config.CopyFrom(current_response.get_config_response)
+    lora = current_config.lora
+
+    for field_name, value in lora_update.items():
+        setattr(lora, field_name, value)
+
+    set_msg = admin_pb2.AdminMessage()
+    set_msg.session_passkey = session_passkey
+    set_msg.set_config.CopyFrom(current_config)
+
+    result = send_admin_message(
+        app,
+        target_node_id,
+        set_msg.SerializeToString(),
+        channel_index,
+        want_ack,
+        True,
+    )
+    result.update({
+        "operation": "set_lora_config",
+        "updated_fields": lora_update,
+        "session_passkey_len": len(session_passkey),
+        "target_node": target_hex,
+    })
+
+    if verify_after_set:
+        time.sleep(0.6)
+        verified = get_lora_config(
+            app,
+            target_node_id,
+            channel_index=channel_index,
+            want_ack=want_ack,
+            timeout_s=timeout_s,
+        )
+        result["verified"] = verified["config"]
+
     return result
 
 
