@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
-
+from app.core.database import SessionLocal
+from app.models import Route
 VISIBLE_ENTRIES: List[Dict[str, Any]] = []
 
 
@@ -89,3 +90,21 @@ def build_graph(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
         "nodes": filtered_nodes,
         "links": unique_links,
     }
+
+def load_entries() -> List[Dict[str, Any]]:
+    db = SessionLocal()
+    entries = []
+    try:
+        # Replace this with your actual query to fetch entries from the database
+        routes = db.query(Route).all()
+        for route in routes:
+            entries.append({
+                "selfId": int.from_bytes(route.reporter, byteorder='big') if route.reporter else None,
+                "nextHop": int.from_bytes(route.next_hop, byteorder='big') if route.next_hop else None,
+                "destId": int.from_bytes(route.destination, byteorder='big') if route.destination else None,
+                "hopCount": route.hop_count,
+                "destSeqNum": route.dest_seq_num,
+            })
+    finally:
+        db.close()
+    return entries
