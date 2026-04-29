@@ -6,9 +6,10 @@ import '@/styles/components/ExtendedNodeView.css';
 interface Props {
   selectedNodeId: string | null;
   onSelectNode: (id: string) => void;
+  onAdminClick?: (id: string) => void;
 }
 
-export default function ExtendedNodeView({ selectedNodeId, onSelectNode }: Props) {
+export default function ExtendedNodeView({ selectedNodeId, onSelectNode, onAdminClick }: Props) {
   const { nodes, loading, error } = useNodesContext();
 
   return (
@@ -43,6 +44,7 @@ export default function ExtendedNodeView({ selectedNodeId, onSelectNode }: Props
                 <TableRow
                   key={node.id}
                   onClick={() => onSelectNode(node.id)}
+                  onDoubleClick={() => onAdminClick?.(node.id)}
                   className={`cursor-pointer font-mono text-xs transition-colors border-border
                     ${selectedNodeId === node.id ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/30"}`}
                 >

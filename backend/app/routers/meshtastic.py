@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Request, WebSocket
 from typing import List, Optional
 from app.serial.meshtastic_client import get_meshtastic_port, start_meshtastic_client
 from ..services.meshtastic_service import fetch_all_nodes, format_node_for_display, discover_meshtastic_ports
@@ -115,6 +115,26 @@ def get_status(app: FastAPI = Depends(get_app)):
         }
 
     return status
+
+@router.websocket("/ws/status")
+async def ws_status(ws: WebSocket):
+    await ws.accept()
+    broadcaster = ws.app.state.meshtastic_status_broadcaster
+    broadcaster.register(ws)
+    try:
+        await ws.send_json(getattr(ws.app.state, "meshtastic_status", None) or {
+            "connected": False,
+            "status": "disconnected",
+            "message": "Meshtastic device is not connected.",
+            "port": getattr(ws.app.state, "meshtastic_port", None),
+            "nodeId": None,
+        })
+        while True:
+            await ws.receive_text()  # Keep connection open, ignore incoming messages
+    except Exception as e:
+        print(f"Meshtastic status WebSocket error: {e}")
+    finally:
+        broadcaster.unregister(ws)
 
 
 @router.post("/start-client")

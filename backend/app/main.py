@@ -12,6 +12,7 @@ from app.services.startup_functions.state import (
   reset_state,
 )
 from app.services.startup_functions.feed_simulator import start_simulated_feed
+from app.services.startup_functions.database_cleanup import clear_network_session_data
 from app.services.meshtastic_service import (
     fetch_all_nodes, 
     format_node_for_display, 
@@ -20,6 +21,7 @@ from app.services.meshtastic_service import (
 
 from app.routers.sdn_serial import router as sdn_serial_router
 from app.routers.route_table import router as route_table_router
+from app.routers.admin import router as admin_router
 
 from app.services.broadcaster import Broadcaster
 from app.serial.worker import SerialWorker
@@ -32,6 +34,7 @@ app = FastAPI()
 app.state.broadcaster = Broadcaster()
 app.state.text_message_broadcaster = Broadcaster()  # Separate broadcaster for DM updates
 app.state.node_update_broadcaster = Broadcaster()  # Separate broadcaster for node updates
+app.state.meshtastic_status_broadcaster = Broadcaster()  # Separate broadcaster for connection status updates
 worker = None
 app.state.pending ={}
 app.state.meshtastic_status = {
@@ -58,9 +61,12 @@ app.include_router(link_quality.router)
 
 app.include_router(sdn_serial_router)
 app.include_router(route_table_router)
+app.include_router(admin_router)
 
 @app.on_event("startup")
 async def startup_event():
+  clear_network_session_data()
+
   # start simulated SDN feed
   reset_state()
   await start_simulated_feed()
@@ -70,6 +76,7 @@ async def startup_event():
   app.state.broadcaster.set_loop(asyncio.get_running_loop())
   app.state.text_message_broadcaster.set_loop(asyncio.get_running_loop())
   app.state.node_update_broadcaster.set_loop(asyncio.get_running_loop())
+  app.state.meshtastic_status_broadcaster.set_loop(asyncio.get_running_loop())
   #line_iter = iter_serial_lines(port="COM3", baud=9600)  # Update with your serial port and baudrate
   # line_iter = iter_fake_lines()
   # global worker
