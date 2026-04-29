@@ -12,6 +12,7 @@ from app.services.startup_functions.state import (
   reset_state,
 )
 from app.services.startup_functions.feed_simulator import start_simulated_feed
+from app.services.startup_functions.database_cleanup import clear_network_session_data
 from app.services.meshtastic_service import (
     fetch_all_nodes, 
     format_node_for_display, 
@@ -64,6 +65,8 @@ app.include_router(admin_router)
 
 @app.on_event("startup")
 async def startup_event():
+  clear_network_session_data()
+
   # start simulated SDN feed
   reset_state()
   await start_simulated_feed()
