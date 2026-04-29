@@ -101,6 +101,22 @@ def get_comports():
     ports = get_meshtastic_port()
     return {"comports": ports, "count": len(ports)}
 
+@router.get("/status")
+def get_status(app: FastAPI = Depends(get_app)):
+    """Get the current Meshtastic connection status"""
+    status = getattr(app.state, "meshtastic_status", None)
+    if not status:
+        status = {
+            "connected": False,
+            "status": "disconnected",
+            "message": "Meshtastic device is not connected.",
+            "port": getattr(app.state, "meshtastic_port", None),
+            "nodeId": None,
+        }
+
+    return status
+
+
 @router.post("/start-client")
 def start_client(devPath: Optional[str] = None, app: FastAPI = Depends(get_app)):
     try:

@@ -4,7 +4,7 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
-from app.routers import topology, meshtastic,texting
+from app.routers import topology, meshtastic, texting, link_quality
 
 from app.services.startup_functions.state import (
   get_visible_entries,
@@ -34,6 +34,13 @@ app.state.text_message_broadcaster = Broadcaster()  # Separate broadcaster for D
 app.state.node_update_broadcaster = Broadcaster()  # Separate broadcaster for node updates
 worker = None
 app.state.pending ={}
+app.state.meshtastic_status = {
+  "connected": False,
+  "status": "disconnected",
+  "message": "Meshtastic device is not connected.",
+  "port": None,
+  "nodeId": None,
+}
 
 app.add_middleware(
   CORSMiddleware,
@@ -47,6 +54,7 @@ app.add_middleware(
 app.include_router(topology.router)
 app.include_router(meshtastic.router)
 app.include_router(texting.router)
+app.include_router(link_quality.router)
 
 app.include_router(sdn_serial_router)
 app.include_router(route_table_router)

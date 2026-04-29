@@ -11,6 +11,7 @@ export default function MessagesView() {
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const autoSelectDoneRef = useRef(false);
 
   // Helper function to normalize hex IDs (remove 0x prefix, lowercase)
   const normalizeId = (id: string | null): string => {
@@ -19,6 +20,13 @@ export default function MessagesView() {
     return id.toLowerCase()
       .replace(/^0x/, '')
       .replace(/^!/, '');
+  };
+
+  // Helper to check if a message is a broadcast
+  const isBroadcastMessage = (msg: Message): boolean => {
+    if (!msg.conversation) return false;
+    const normalizedConv = normalizeId(msg.conversation);
+    return normalizedConv.slice(-8) === 'ffffffff';
   };
 
   // Scroll to bottom when new messages arrive
@@ -61,17 +69,17 @@ export default function MessagesView() {
       }
     });
 
-    // Add messages to conversations (skip broadcast messages here)
+    // Add messages to conversations (ONLY non-broadcast messages)
     messages.forEach(message => {
       // Skip messages with null IDs
       if (!message.source_id || !message.destination_id) return;
       
-      // Skip broadcast messages (destination 0xffffffff)
-      const normalizedDest = normalizeId(message.destination_id);
-      if (normalizedDest.slice(-8) === 'ffffffff') return;
+      // SKIP broadcast messages - they go ONLY to broadcastMessages
+      if (isBroadcastMessage(message)) return;
       
       // Filter: Only show messages where current node is source OR destination
       const normalizedSource = normalizeId(message.source_id);
+      const normalizedDest = normalizeId(message.destination_id);
       if (normalizedSelfId) {
         const isSelfSource = normalizedSource.slice(-7) === normalizedSelfId.slice(-7);
         const isSelfDest = normalizedDest.slice(-7) === normalizedSelfId.slice(-7);
@@ -101,18 +109,32 @@ export default function MessagesView() {
         }
       }
 
-      // Only add message if the other node is in the active nodes list
+      // If conversation still not found, create one for this node
       if (!targetConv) {
-        // Node not in active list, skip this message
-        return;
+        const nodeInfo = nodes.find(n => {
+          const normalizedNodeId = normalizeId(n.id);
+          return normalizedNodeId.slice(-7) === normalizedOtherId.slice(-7);
+        });
+        
+        targetConv = {
+          nodeId: otherNodeId,
+          nodeName: nodeInfo?.name || otherNodeId,
+          lastMessage: null,
+          messages: [],
+          status: nodeInfo?.status || 'unknown',
+        };
+        conversationMap.set(normalizedOtherId, targetConv);
       }
       
-      targetConv.messages.push(message);
-      
-      // Update last message if this one is newer
-      if (!targetConv.lastMessage || 
-          new Date(message.timestamp) > new Date(targetConv.lastMessage.timestamp)) {
-        targetConv.lastMessage = message;
+      // Only add message if not already in conversation (prevent duplicates)
+      if (!targetConv.messages.find(m => String(m.mes_id) === String(message.mes_id))) {
+        targetConv.messages.push(message);
+        
+        // Update last message if this one is newer
+        if (!targetConv.lastMessage || 
+            new Date(message.timestamp) > new Date(targetConv.lastMessage.timestamp)) {
+          targetConv.lastMessage = message;
+        }
       }
     });
 
@@ -127,12 +149,14 @@ export default function MessagesView() {
       });
   }, [messages, nodes, selfNodeId]);
 
-  // Get broadcast messages (destination 0xffffffff)
+  // Get broadcast messages (ONLY conversation is 0xffffffff)
   const broadcastMessages = useMemo(() => {
     return messages
       .filter(msg => {
-        const normalizedDest = normalizeId(msg.destination_id);
-        return normalizedDest.slice(-8) === 'ffffffff';
+        // ONLY include messages where conversation is broadcast (0xffffffff)
+        if (!msg.conversation) return false;
+        const normalizedConv = normalizeId(msg.conversation);
+        return normalizedConv.slice(-8) === 'ffffffff';
       })
       .sort((a, b) => 
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -155,12 +179,18 @@ export default function MessagesView() {
     ) || [];
   }, [selectedNodeId, conversations, broadcastMessages]);
 
-  // Auto-select first conversation
+  // Auto-select first conversation when component mounts or when changing context
   useEffect(() => {
-    if (!selectedNodeId && conversations.length > 0) {
-      setSelectedNodeId(conversations[0].nodeId);
+    if (!selectedNodeId) {
+      if (conversations.length > 0) {
+        setSelectedNodeId(conversations[0].nodeId);
+        autoSelectDoneRef.current = true;
+      } else if (broadcastMessages.length > 0 && !autoSelectDoneRef.current) {
+        setSelectedNodeId('broadcast');
+        autoSelectDoneRef.current = true;
+      }
     }
-  }, [conversations, selectedNodeId]);
+  }, [conversations.length, broadcastMessages.length, selectedNodeId]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedNodeId || sending) return;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Map, GitBranch, Server, MessageSquare, Route, MapPin } from "lucide-react";
+import { Map, GitBranch, Server, MessageSquare, Route, MapPin, Activity } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import NodeDetailsSidebar from "@/components/dashboard/NodeDetailsSidebar";
 import MapView from "@/components/dashboard/MapView";
@@ -10,8 +10,11 @@ import ExtendedNodeView from "@/components/dashboard/ExtendedNodeView";
 import MessagesView from "@/components/dashboard/MessagesView";
 import RouteAnalysis from "@/components/dashboard/RouteAnalysis";
 import OfflineMapView from "@/components/dashboard/OfflineMapView";
+import NetworkQuality from "@/components/dashboard/NetworkQuality";
 import { useNodesContext } from "@/contexts/NodesContext";
 import { MessagesProvider } from "@/contexts/MessagesContext";
+import { useMeshtasticConnectionStatus } from "@/hooks/useMeshtasticConnection";
+import { DeviceDisconnectionOverlay } from "@/components/DeviceDisconnectionOverlay";
 
 const tabs = [
   { value: "offline-map", label: "Offline Map", icon: MapPin },
@@ -20,12 +23,14 @@ const tabs = [
   { value: "nodes", label: "Nodes", icon: Server },
   { value: "messages", label: "Messages", icon: MessageSquare },
   { value: "routes", label: "Routes", icon: Route },
+  { value: "network-quality", label: "Network Quality", icon: Activity },
 ];
 
 const Index = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { nodes, selfNodeId } = useNodesContext();
+  const { status: deviceStatus } = useMeshtasticConnectionStatus();
 
   // Check if COM port is selected, redirect to init screen if not
   useEffect(() => {
@@ -55,14 +60,26 @@ const Index = () => {
     }
   }, [nodes, selfNodeId, selectedNodeId]);
 
-  return (
-    <MessagesProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-background">
-        {/* Persistent SDN Node Sidebar */}
-        <NodeDetailsSidebar selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+  const isDeviceConnected = deviceStatus?.connected ?? true;
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+  return (
+    <>
+      {/* Device Disconnection Overlay - rendered at top level */}
+      {!isDeviceConnected && deviceStatus && (
+        <DeviceDisconnectionOverlay
+          message={deviceStatus.message}
+          port={deviceStatus.port}
+          onRetry={() => navigate('/')}
+        />
+      )}
+
+      <MessagesProvider>
+        <div className={`flex h-screen w-full overflow-hidden bg-background ${!isDeviceConnected ? 'pointer-events-none opacity-50' : ''}`}>
+          {/* Persistent SDN Node Sidebar */}
+          <NodeDetailsSidebar selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
         <DashboardHeader />
 
         <Tabs defaultValue="offline-map" className="flex-1 flex flex-col overflow-hidden">
@@ -100,11 +117,15 @@ const Index = () => {
             <TabsContent value="routes" className="h-full m-0">
               <RouteAnalysis />
             </TabsContent>
+            <TabsContent value="network-quality" className="h-full m-0">
+              <NetworkQuality />
+            </TabsContent>
           </div>
         </Tabs>
       </div>
     </div>
     </MessagesProvider>
+    </>
   );
 };
 

@@ -105,35 +105,43 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
           // Check if this message already exists (for ACK updates)
           setMessages(prev => {
             // First check for exact mes_id match (for ACK status updates on existing messages)
+            // mes_id is the unique identifier, so it's the only condition needed
             const existingIndex = prev.findIndex(
-              m => String(m.mes_id) === String(message.mes_id) && 
-                   m.source_id === message.source_id
+              m => String(m.mes_id) === String(message.mes_id)
             );
             
             if (existingIndex !== -1) {
               // Update existing message (ACK status change or any other update)
               const updated = [...prev];
               updated[existingIndex] = { ...updated[existingIndex], ...message };
+              console.log(`[Messages] Updated message ${message.mes_id} with ack_status: ${message.ack_status}`);
               return updated;
             }
             
             // Check if there's an optimistic message with same text/destination that should be replaced
+            // Optimistic messages have source_id === null until confirmed from backend
             const optimisticIndex = prev.findIndex(
               m => m.sent_by_me && 
+                   m.source_id === null &&  // Key identifier: optimistic messages have no source
                    m.text === message.text && 
-                   m.destination_id === message.destination_id &&
-                   m.mes_id > Date.now() - 10000 // Optimistic IDs are recent timestamps
+                   m.destination_id === message.destination_id
             );
             
             if (optimisticIndex !== -1) {
               // Replace optimistic message with real one
               const updated = [...prev];
               updated[optimisticIndex] = message;
+              console.log(`[Messages] Replaced optimistic message with real message ${message.mes_id}`);
               return updated;
             }
             
-            // Add new message
-            return [...prev, message];
+            // Add new message (but first remove any duplicates with same mes_id)
+            const filtered = prev.filter(m => String(m.mes_id) !== String(message.mes_id));
+            if (filtered.length < prev.length) {
+              console.log(`[Messages] Removed ${prev.length - filtered.length} duplicate(s) with mes_id ${message.mes_id}`);
+            }
+            console.log(`[Messages] Added new message ${message.mes_id} with text: "${message.text}" conversation: ${message.conversation}`);
+            return [...filtered, message];
           });
         } catch (err) {
           console.error('Error parsing WebSocket message:', err);
@@ -148,6 +156,8 @@ export function useMessages(shouldConnect: boolean = false): UseMessagesReturn {
       ws.onclose = () => {
         setWsConnected(false);
         wsRef.current = null;
+        // Clear error on close, will try to reconnect
+        setError(null);
 
         // Attempt to reconnect after 3 seconds if we should still be connected
         if (shouldConnect) {
