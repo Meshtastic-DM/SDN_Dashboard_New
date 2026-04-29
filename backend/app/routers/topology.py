@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, WebSocket, Request, Query
-from app.services.startup_functions.state import get_visible_entries, build_graph, reset_state
+from app.services.startup_functions.state import get_visible_entries, build_graph, load_entries, reset_state
 from app.services.startup_functions.feed_simulator import start_simulated_feed
 from app.core.database import SessionLocal, get_db
 from app.models.route import Route
@@ -27,7 +27,7 @@ def get_broadcaster(request: Request) -> Broadcaster:
 
 @router.get("/topology")
 def get_topology():
-    entries = get_visible_entries()
+    entries = load_entries()
     return build_graph(entries)
 
 @router.get("/entries")
