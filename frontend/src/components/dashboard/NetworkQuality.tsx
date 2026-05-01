@@ -8,6 +8,14 @@ const calculateRelayQuality = (rxGood: number, rxBad: number): number => {
   return total > 0 ? (rxGood / total) * 100 : 0;
 };
 
+const utilizationBarWidth = (utilizationPercent: number): string => {
+  return `${Math.min(Math.max(utilizationPercent, 0), 100)}%`;
+};
+
+const formatUtilizationValue = (utilizationPercent: number): string => {
+  return utilizationPercent.toFixed(2);
+};
+
 const getQualityColor = (quality: number): string => {
   if (quality >= 80) return "text-green-500";
   if (quality >= 60) return "text-yellow-500";
@@ -118,13 +126,13 @@ export default function NetworkQuality() {
             <div className="bg-muted/50 rounded p-3">
               <div className="text-[10px] font-mono text-muted-foreground mb-1">CHANNEL UTIL</div>
               <div className="text-xl font-bold font-mono text-blue-500">
-                {stats.avg_channel_util.toFixed(2)}%
+                {formatUtilizationValue(stats.avg_channel_util)}
               </div>
             </div>
             <div className="bg-muted/50 rounded p-3">
               <div className="text-[10px] font-mono text-muted-foreground mb-1">AIR TX UTIL</div>
               <div className="text-xl font-bold font-mono text-purple-500">
-                {stats.avg_air_util_tx.toFixed(2)}%
+                {formatUtilizationValue(stats.avg_air_util_tx)}
               </div>
             </div>
           </div>
@@ -354,16 +362,13 @@ export default function NetworkQuality() {
                   </div>
                   <div className="mb-2">
                     <div className="text-3xl font-bold font-mono text-blue-500">
-                      {(selectedReport.channel_util * 100).toFixed(2)}%
-                    </div>
-                    <div className="text-[10px] font-mono text-muted-foreground mt-1">
-                      Raw: {selectedReport.channel_util.toFixed(6)}
+                      {formatUtilizationValue(selectedReport.channel_util)}
                     </div>
                   </div>
                   <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                     <div
                       className="h-full bg-blue-500 transition-all"
-                      style={{ width: `${Math.min(selectedReport.channel_util * 100, 100)}%` }}
+                      style={{ width: utilizationBarWidth(selectedReport.channel_util) }}
                     />
                   </div>
                 </div>
@@ -378,16 +383,13 @@ export default function NetworkQuality() {
                   </div>
                   <div className="mb-2">
                     <div className="text-3xl font-bold font-mono text-purple-500">
-                      {(selectedReport.air_util_tx * 100).toFixed(2)}%
-                    </div>
-                    <div className="text-[10px] font-mono text-muted-foreground mt-1">
-                      Raw: {selectedReport.air_util_tx.toFixed(6)}
+                      {formatUtilizationValue(selectedReport.air_util_tx)}
                     </div>
                   </div>
                   <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                     <div
                       className="h-full bg-purple-500 transition-all"
-                      style={{ width: `${Math.min(selectedReport.air_util_tx * 100, 100)}%` }}
+                      style={{ width: utilizationBarWidth(selectedReport.air_util_tx) }}
                     />
                   </div>
                 </div>

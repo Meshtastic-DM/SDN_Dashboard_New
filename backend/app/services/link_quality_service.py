@@ -20,8 +20,8 @@ def save_link_quality_report(
         relay_nodes: List of relay node IDs (up to 3)
         rx_good: List of RX good counts
         rx_bad: List of RX bad counts
-        channel_util: Channel utilization (0-1)
-        air_util_tx: Air utilization TX (0-1)
+        channel_util: Channel utilization percentage reported by packet (0-100)
+        air_util_tx: Air utilization TX percentage reported by packet (0-100)
     """
     db = SessionLocal()
     try:

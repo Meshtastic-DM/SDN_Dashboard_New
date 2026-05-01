@@ -6,3 +6,5 @@ alembic
 pydantic
 pyserial
 meshtastic
+moonshine-voice
+python-multipart
