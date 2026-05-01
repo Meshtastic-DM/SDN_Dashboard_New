@@ -7,8 +7,8 @@ export interface LinkQualityReport {
   relay_nodes: string[]; // Array of hex relay node IDs
   rx_good: number[]; // Received good packets per relay
   rx_bad: number[]; // Received bad packets per relay
-  channel_util: number; // Channel utilization percentage (0-1)
-  air_util_tx: number; // Air utilization TX percentage (0-1)
+  channel_util: number; // Channel utilization percentage reported by packet (0-100)
+  air_util_tx: number; // Air utilization TX percentage reported by packet (0-100)
   timestamp: string; // ISO timestamp
   last_heard?: number; // Unix timestamp
 }

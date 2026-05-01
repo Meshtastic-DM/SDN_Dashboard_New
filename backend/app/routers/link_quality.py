@@ -79,8 +79,8 @@ def get_link_quality_reports(
         stats = {
             "avg_quality": total_quality / measurement_count if measurement_count > 0 else 0,
             "total_relays": total_relays,
-            "avg_channel_util": (total_channel_util / total_reports) * 100,
-            "avg_air_util_tx": (total_air_util_tx / total_reports) * 100,
+            "avg_channel_util": total_channel_util / total_reports,
+            "avg_air_util_tx": total_air_util_tx / total_reports,
             "reports_count": total_reports
         }
     else:
@@ -135,8 +135,8 @@ def get_network_quality_stats(
         return {
             "avg_quality": total_quality / total_relays if total_relays > 0 else 0,
             "total_relays": total_relays,
-            "avg_channel_util": (total_channel_util / total_reports) * 100,
-            "avg_air_util_tx": (total_air_util_tx / total_reports) * 100,
+            "avg_channel_util": total_channel_util / total_reports,
+            "avg_air_util_tx": total_air_util_tx / total_reports,
             "reports_count": total_reports
         }
     else:
