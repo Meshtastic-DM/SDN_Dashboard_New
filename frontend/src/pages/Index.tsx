@@ -19,7 +19,6 @@ import { DeviceDisconnectionOverlay } from "@/components/DeviceDisconnectionOver
 
 const tabs = [
   { value: "offline-map", label: "Offline Map", icon: MapPin },
-  { value: "map", label: "Map View", icon: Map },
   { value: "topology", label: "Topology", icon: GitBranch },
   { value: "nodes", label: "Nodes", icon: Server },
   { value: "messages", label: "Messages", icon: MessageSquare },
