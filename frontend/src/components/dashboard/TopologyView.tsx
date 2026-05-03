@@ -1,8 +1,22 @@
 import { mockNodes } from "@/data/mockNodes";
 import '@/styles/components/TopologyView.css';
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const VIEWBOX_WIDTH = 650;
+const VIEWBOX_HEIGHT = 480;
+const PADDING_X = 85;
+const PADDING_Y = 70;
+
+type TopologyNode = {
+  id: string;
+  name: string;
+  type: "switch" | "router" | "controller" | "host";
+  status: "online" | "offline" | "warning";
+  connections: string[];
+  x?: number;
+  y?: number;
+};
 
 interface Props {
   selectedNodeId: string | null;
@@ -25,7 +39,7 @@ export default function TopologyView({ selectedNodeId, onSelectNode }: Props) {
     ...n,
     id: normalizeId(n.id as any),
     connections: (n.connections || []).map((c: any) => normalizeId(c)),
-  })));
+  })) as TopologyNode[]);
 
   // Selected id normalized for comparisons
   const selectedNormalized = selectedNodeId ? normalizeId(selectedNodeId) : null;
@@ -47,6 +61,8 @@ export default function TopologyView({ selectedNodeId, onSelectNode }: Props) {
             name: n.name || `Node ${id}`,
             type: n.type || 'router',
             status: n.status || 'online',
+            x: typeof n.x === "number" ? n.x : undefined,
+            y: typeof n.y === "number" ? n.y : undefined,
             connections: [] as string[],
           });
         });
@@ -73,45 +89,142 @@ export default function TopologyView({ selectedNodeId, onSelectNode }: Props) {
     return () => { mounted = false; };
   }, []);
 
-  // Build adjacency
-  const connections: [string, string][] = [];
-  nodes.forEach(node => {
-    (node.connections || []).forEach((c: string) => {
-      const a = node.id;
-      const b = c;
-      const key = [a, b].sort().join("-");
-      if (!connections.find(([x, y]) => [x, y].sort().join("-") === key)) {
-        connections.push([a, b]);
+  const { connections, positions } = useMemo(() => {
+    const nodeIds = new Set(nodes.map(node => node.id));
+    const edgeMap = new Map<string, [string, string]>();
+    const adjacency = new Map<string, string[]>();
+
+    nodes.forEach(node => adjacency.set(node.id, []));
+
+    nodes.forEach(node => {
+      (node.connections || []).forEach((connectionId: string) => {
+        const a = node.id;
+        const b = connectionId;
+        if (!nodeIds.has(a) || !nodeIds.has(b) || a === b) return;
+
+        const edgeKey = [a, b].sort().join("-");
+        if (!edgeMap.has(edgeKey)) edgeMap.set(edgeKey, [a, b]);
+        adjacency.get(a)?.push(b);
+        adjacency.get(b)?.push(a);
+      });
+    });
+
+    const hasBackendPositions = nodes.length > 0 && nodes.every(
+      node => typeof node.x === "number" && typeof node.y === "number"
+    );
+
+    if (hasBackendPositions) {
+      return {
+        connections: Array.from(edgeMap.values()),
+        positions: nodes.reduce((acc, node) => {
+          acc[node.id] = { x: node.x!, y: node.y! };
+          return acc;
+        }, {} as Record<string, { x: number; y: number }>),
+      };
+    }
+
+    const orderedNodes = [...nodes].sort((a, b) => {
+      const degreeDiff = (adjacency.get(b.id)?.length || 0) - (adjacency.get(a.id)?.length || 0);
+      return degreeDiff || a.id.localeCompare(b.id);
+    });
+
+    const visited = new Set<string>();
+    const components: TopologyNode[][] = [];
+
+    orderedNodes.forEach(startNode => {
+      if (visited.has(startNode.id)) return;
+
+      const queue = [startNode.id];
+      const componentIds: string[] = [];
+      visited.add(startNode.id);
+
+      while (queue.length) {
+        const currentId = queue.shift()!;
+        componentIds.push(currentId);
+        (adjacency.get(currentId) || []).forEach(nextId => {
+          if (visited.has(nextId)) return;
+          visited.add(nextId);
+          queue.push(nextId);
+        });
       }
-    });
-  });
 
-  // Layered layout
-  const layers: Record<string, number> = { controller: 0, router: 1, switch: 2, host: 3 };
-  const grouped = nodes.reduce((acc, n) => {
-    const l = layers[n.type];
-    if (!acc[l]) acc[l] = [];
-    acc[l].push(n);
-    return acc;
-  }, {} as Record<number, typeof nodes>);
-
-  const positions: Record<string, { x: number; y: number }> = {};
-  Object.entries(grouped).forEach(([layer, nodes]) => {
-    const l = Number(layer);
-    const y = 60 + l * 100;
-    nodes.forEach((n, i) => {
-      const x = 100 + i * (500 / Math.max(nodes.length, 1));
-      positions[n.id] = { x, y };
+      components.push(
+        componentIds
+          .map(id => nodes.find(node => node.id === id))
+          .filter(Boolean) as TopologyNode[]
+      );
     });
-  });
+
+    const positions: Record<string, { x: number; y: number }> = {};
+    const componentHeight = (VIEWBOX_HEIGHT - PADDING_Y * 2) / Math.max(components.length, 1);
+
+    components.forEach((component, componentIndex) => {
+      const sortedComponent = [...component].sort((a, b) => {
+        const degreeA = adjacency.get(a.id)?.length || 0;
+        const degreeB = adjacency.get(b.id)?.length || 0;
+        if (degreeA === 1 && degreeB !== 1) return -1;
+        if (degreeB === 1 && degreeA !== 1) return 1;
+        return a.id.localeCompare(b.id);
+      });
+
+      const root = sortedComponent[0];
+      const levelMap = new Map<string, number>([[root.id, 0]]);
+      const queue = [root.id];
+
+      while (queue.length) {
+        const currentId = queue.shift()!;
+        const currentLevel = levelMap.get(currentId) || 0;
+        (adjacency.get(currentId) || [])
+          .sort((a, b) => a.localeCompare(b))
+          .forEach(nextId => {
+            if (levelMap.has(nextId)) return;
+            levelMap.set(nextId, currentLevel + 1);
+            queue.push(nextId);
+          });
+      }
+
+      const levels = new Map<number, TopologyNode[]>();
+      component.forEach(node => {
+        const level = levelMap.get(node.id) || 0;
+        if (!levels.has(level)) levels.set(level, []);
+        levels.get(level)!.push(node);
+      });
+
+      const levelEntries = Array.from(levels.entries()).sort(([a], [b]) => a - b);
+      const maxLevel = Math.max(levelEntries.length - 1, 1);
+      const componentTop = PADDING_Y + componentIndex * componentHeight;
+      const componentCenterY = componentTop + componentHeight / 2;
+      const usableComponentHeight = Math.max(120, componentHeight - 35);
+
+      levelEntries.forEach(([level, levelNodes]) => {
+        const sortedLevelNodes = [...levelNodes].sort((a, b) => a.id.localeCompare(b.id));
+        sortedLevelNodes.forEach((node, index) => {
+          const x = PADDING_X + (level / maxLevel) * (VIEWBOX_WIDTH - PADDING_X * 2);
+          const yOffset = sortedLevelNodes.length === 1
+            ? 0
+            : (index - (sortedLevelNodes.length - 1) / 2) * Math.min(90, usableComponentHeight / (sortedLevelNodes.length - 1));
+
+          positions[node.id] = {
+            x,
+            y: Math.max(PADDING_Y, Math.min(VIEWBOX_HEIGHT - PADDING_Y / 2, componentCenterY + yOffset)),
+          };
+        });
+      });
+    });
+
+    return {
+      connections: Array.from(edgeMap.values()),
+      positions,
+    };
+  }, [nodes]);
 
   return (
     <div className="h-full w-full bg-grid rounded-lg border border-border overflow-hidden relative">
       <div className="absolute top-3 left-3 font-mono text-xs text-muted-foreground z-10">
         TOPOLOGY VIEW
       </div>
-      <svg width="100%" height="100%" viewBox="0 0 650 480" className="min-h-[400px]">
-        {/* Layer lines */}
+      <svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="min-h-[400px]">
+        {/* Guide lines */}
         {[0, 1, 2, 3].map(l => (
           <line key={l} x1={15} x2={635} y1={60 + l * 100} y2={60 + l * 100}
             stroke="hsl(270, 60%, 50%)" strokeOpacity={0.08} strokeDasharray="8 4" />
