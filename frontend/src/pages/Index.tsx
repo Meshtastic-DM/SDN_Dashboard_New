@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Map, GitBranch, Server, MessageSquare, Route, MapPin, Activity } from "lucide-react";
+import { Map, GitBranch, Server, MessageSquare, Route, MapPin, Activity, Send } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import NodeDetailsSidebar from "@/components/dashboard/NodeDetailsSidebar";
 import MapView from "@/components/dashboard/MapView";
@@ -9,6 +9,7 @@ import TopologyView from "@/components/dashboard/TopologyView";
 import ExtendedNodeView from "@/components/dashboard/ExtendedNodeView";
 import MessagesView from "@/components/dashboard/MessagesView";
 import RouteAnalysis from "@/components/dashboard/RouteAnalysis";
+import RouteInstallPanel from "@/components/dashboard/RouteInstallPanel";
 import OfflineMapView from "@/components/dashboard/OfflineMapView";
 import NetworkQuality from "@/components/dashboard/NetworkQuality";
 import AdminModal from "@/components/dashboard/AdminModal";
@@ -23,6 +24,7 @@ const tabs = [
   { value: "nodes", label: "Nodes", icon: Server },
   { value: "messages", label: "Messages", icon: MessageSquare },
   { value: "routes", label: "Routes", icon: Route },
+  { value: "route-install", label: "Route Install", icon: Send },
   { value: "network-quality", label: "Network Quality", icon: Activity },
 ];
 
@@ -119,6 +121,9 @@ const Index = () => {
             </TabsContent>
             <TabsContent value="routes" className="h-full m-0">
               <RouteAnalysis />
+            </TabsContent>
+            <TabsContent value="route-install" className="h-full m-0">
+              <RouteInstallPanel selectedNodeId={selectedNodeId} />
             </TabsContent>
             <TabsContent value="network-quality" className="h-full m-0">
               <NetworkQuality />
