@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Power, Radio, MapPin, Clock, Waves, Settings } from "lucide-react";
+import { Power, Radio, MapPin, Clock, Waves, Settings, ShieldCheck } from "lucide-react";
 import DeviceControlPanel from "./AdminPanels/DeviceControlPanel";
 import NodeManagementPanel from "./AdminPanels/NodeManagementPanel";
+import NodeRolePanel from "./AdminPanels/NodeRolePanel";
 import PositionPanel from "./AdminPanels/PositionPanel";
 import OwnerPanel from "./AdminPanels/OwnerPanel";
 import TimePanel from "./AdminPanels/TimePanel";
@@ -29,6 +30,12 @@ export default function RemoteAdminPanel({ selectedNode }: Props) {
       label: "Nodes",
       icon: Radio,
       component: NodeManagementPanel,
+    },
+    {
+      value: "node-role-setting",
+      label: "Node Role Setting",
+      icon: ShieldCheck,
+      component: NodeRolePanel,
     },
     {
       value: "position",

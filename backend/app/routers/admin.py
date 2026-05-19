@@ -1,6 +1,10 @@
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
+from typing import Optional
 
+from app.core.database import SessionLocal
+from app.models.node import Node
 from app.request_models.admin_models import (
     SetOwnerRequest,
     RebootRequest,
@@ -47,8 +51,74 @@ from app.services.admin_service import (
     send_get_device_connection_status,
     refresh_session_key,
 )
+from app.services.node_id_utils import parse_hex_node_id
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
+
+NODE_ROLES = {"Rescuer", "Fire Fighters", "Volunteers"}
+
+
+class SetNodeRoleRequest(BaseModel):
+    target_node: str = Field(..., description="Target node ID as 4-byte hex")
+    role: Optional[str] = Field(None, description="Node role, or null to remove it")
+
+
+def serialize_node(node: Node) -> dict:
+    return {
+        "id": node.id.hex(),
+        "long_name": node.long_name,
+        "hw_model": node.hw_model,
+        "snr": node.snr,
+        "battery_level": node.battery_level,
+        "status": node.status,
+        "hops_away": node.hops_away,
+        "gps_coordinates": node.gps_coordinates,
+        "role": node.role,
+    }
+
+
+@router.post("/node/role")
+async def set_node_role(req: SetNodeRoleRequest, request: Request):
+    """Update the dashboard role stored for a node in the local database."""
+    if req.role is not None and req.role not in NODE_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"role must be one of: {', '.join(sorted(NODE_ROLES))}",
+        )
+
+    try:
+        node_id = parse_hex_node_id(
+            req.target_node,
+            field_name="target_node",
+            exact_hex_len=8,
+        ).to_bytes(4, byteorder="big")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    db = SessionLocal()
+    try:
+        node = db.query(Node).filter(Node.id == node_id).first()
+        if not node:
+            raise HTTPException(status_code=404, detail="Node not found")
+
+        node.role = req.role
+        db.commit()
+        db.refresh(node)
+
+        payload = serialize_node(node)
+        broadcaster = getattr(request.app.state, "node_update_broadcaster", None)
+        if broadcaster:
+            broadcaster.publish(payload)
+
+        return {"status": "ok", "node": payload}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    finally:
+        db.close()
 
 
 # =====================================================================
