@@ -35,7 +35,7 @@ def update_nodes_db(iface):
             if uptimeSeconds is not None:
                     status = 'online' if uptimeSeconds > 0 else 'offline'
             elif existing_node.last_heard is not None:
-                if time.time() - existing_node.last_heard > 300:  # If last heard is more than 5 minutes ago, consider offline
+                if time.time() - existing_node.last_heard > 1500:  # If last heard is more than 5 minutes ago, consider offline
                     status = 'offline'
                 else:
                     status = 'online'
