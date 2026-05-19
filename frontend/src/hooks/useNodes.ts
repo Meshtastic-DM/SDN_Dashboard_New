@@ -51,9 +51,18 @@ export function useNodes() {
 
     ws.onmessage = (event) => {
       try {
-        const data: MeshtasticNode[] = JSON.parse(event.data);
-        const transformedNodes = data.map(transformNodeData);
-        setNodes(transformedNodes);
+        const data: MeshtasticNode[] | MeshtasticNode = JSON.parse(event.data);
+        const updatedNodes = Array.isArray(data) ? data : [data];
+        const transformedNodes = updatedNodes.map(transformNodeData);
+        setNodes(currentNodes => {
+          if (Array.isArray(data)) return transformedNodes;
+
+          const updatedNode = transformedNodes[0];
+          const existingIndex = currentNodes.findIndex(node => node.id === updatedNode.id);
+          if (existingIndex === -1) return [...currentNodes, updatedNode];
+
+          return currentNodes.map(node => node.id === updatedNode.id ? updatedNode : node);
+        });
         setLoading(false);
       } catch (err) {
         console.error('Error parsing WebSocket message:', err);
